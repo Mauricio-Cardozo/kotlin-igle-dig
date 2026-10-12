@@ -49,3 +49,17 @@ object BibliaDestinations {
         }
     }
 }
+
+/**
+ * Routes for destinations originating from the Home/Liturgia screen.
+ */
+object LiturgiaDestinations {
+    const val EVANGELIO = "evangelio"
+    const val ROSARIO_GUIA = "rosario/guia"
+    const val ROSARIO_CORONILLA = "rosario/coronilla"
+    const val SANTO_DETALLE = "santo/{id}"
+    const val MISAL_PROPIO = "misal/propio"
+    const val AJUSTES = "ajustes"
+
+    fun santoDetalleRoute(id: Long): String = "santo/$id"
+}

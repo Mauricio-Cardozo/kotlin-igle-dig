@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Church
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,9 @@ import com.example.ui.biblia.CapitulosScreen
 import com.example.ui.biblia.LecturaScreen
 import com.example.ui.biblia.LibrosScreen
 import com.example.ui.common.ComingSoonScreen
+import com.example.ui.liturgia.LiturgiaScreen
+import com.example.ui.liturgia.LiturgiaViewModel
+import com.example.ui.liturgia.LiturgiaViewModelFactory
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
@@ -60,6 +64,13 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val liturgiaViewModel: LiturgiaViewModel = viewModel(
+        factory = LiturgiaViewModelFactory(
+            appContainer.liturgiaRepository,
+            appContainer.streaksPreferencesRepository
+        )
+    )
+
     val bibliaViewModel: BibliaViewModel = viewModel(
         factory = BibliaViewModelFactory(
             appContainer.bibliaRepository,
@@ -69,6 +80,7 @@ fun MainScreen(
 
     // Check which tab is active
     val isBibliaTab = currentRoute?.startsWith("biblia_") == true
+    val isLiturgiaTab = currentRoute == null || currentRoute == BottomNavTab.LITURGIA.route
 
     Scaffold(
         bottomBar = {
@@ -83,6 +95,7 @@ fun MainScreen(
                 BottomNavTab.entries.forEach { tab ->
                     val selected = when (tab) {
                         BottomNavTab.BIBLIA -> isBibliaTab
+                        BottomNavTab.LITURGIA -> isLiturgiaTab
                         else -> currentRoute == tab.route
                     }
 
@@ -138,15 +151,78 @@ fun MainScreen(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = BibliaDestinations.LIBROS,
+            startDestination = BottomNavTab.LITURGIA.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // Liturgia Tab
+            // Liturgia Tab (Home)
             composable(BottomNavTab.LITURGIA.route) {
+                LiturgiaScreen(
+                    viewModel = liturgiaViewModel,
+                    onNavigateToEvangelio = { navController.navigate(LiturgiaDestinations.EVANGELIO) },
+                    onNavigateToRosario = { navController.navigate(LiturgiaDestinations.ROSARIO_GUIA) },
+                    onNavigateToCoronilla = { navController.navigate(LiturgiaDestinations.ROSARIO_CORONILLA) },
+                    onNavigateToSanto = { id -> navController.navigate(LiturgiaDestinations.santoDetalleRoute(id)) },
+                    onNavigateToMisalPropio = { navController.navigate(LiturgiaDestinations.MISAL_PROPIO) },
+                    onNavigateToAjustes = { navController.navigate(LiturgiaDestinations.AJUSTES) }
+                )
+            }
+
+            // Destinations originating from Liturgia
+            composable(LiturgiaDestinations.EVANGELIO) {
                 ComingSoonScreen(
-                    title = "Liturgia",
+                    title = "Evangelio del Día",
                     icon = Icons.Default.Church,
-                    description = "El Misal Romano completo con oraciones, prefacios, lecturas diarias y plegarias eucarísticas estará disponible en la próxima fase."
+                    description = "El texto completo de las lecturas y el Evangelio del día estará disponible en la próxima pantalla de lectura litúrgica.",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(LiturgiaDestinations.ROSARIO_GUIA) {
+                ComingSoonScreen(
+                    title = "Santo Rosario",
+                    icon = Icons.Default.VolunteerActivism,
+                    description = "La guía interactiva paso a paso del Santo Rosario con seguimiento de misterios y cuentas se integrará próximamente.",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(LiturgiaDestinations.ROSARIO_CORONILLA) {
+                ComingSoonScreen(
+                    title = "Coronilla de la Misericordia",
+                    icon = Icons.Default.VolunteerActivism,
+                    description = "La guía interactiva de la Coronilla de la Divina Misericordia se integrará próximamente.",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = LiturgiaDestinations.SANTO_DETALLE,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val id = backStackEntry.arguments?.getLong("id") ?: 0L
+                ComingSoonScreen(
+                    title = "Santo del Día",
+                    icon = Icons.Default.Church,
+                    description = "La biografía detallada y oraciones para el santo (ID $id) se integrarán en la próxima fase.",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(LiturgiaDestinations.MISAL_PROPIO) {
+                ComingSoonScreen(
+                    title = "Propio del Tiempo",
+                    icon = Icons.Default.Church,
+                    description = "El Misal Romano completo con las oraciones del Propio del Tiempo se integrará en la fase de Liturgia.",
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(LiturgiaDestinations.AJUSTES) {
+                ComingSoonScreen(
+                    title = "Ajustes",
+                    icon = Icons.Default.Settings,
+                    description = "Configuración de notificaciones, recordatorios, tamaño de letra y respaldo de datos.",
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
