@@ -27,18 +27,30 @@ class IglesiaDatabaseHelper(
         const val DATABASE_NAME = "iglesia_digital.db"
         const val DATABASE_VERSION = 1
         private const val USER_VERSION_FTS_INITIALIZED = 1
+
+        // Increment this whenever assets/iglesia_digital.db is updated with new content
+        const val CURRENT_CONTENT_VERSION = 1
+        private const val PREFS_NAME = "iglesia_db_prefs"
+        private const val KEY_INSTALLED_CONTENT_VERSION = "installed_content_version"
     }
 
     private var databaseInstance: SQLiteDatabase? = null
 
     /**
-     * Prepares the database by copying it from assets if needed,
-     * and building the FTS5 index if not already built.
+     * Prepares the database by copying it from assets if not present or if an updated
+     * content version is bundled, and building the FTS5 index if not already built.
      */
     suspend fun initializeDatabase(): Unit = withContext(Dispatchers.IO) {
         val dbFile = context.getDatabasePath(DATABASE_NAME)
-        if (!dbFile.exists()) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val installedVersion = prefs.getInt(KEY_INSTALLED_CONTENT_VERSION, 0)
+
+        // Close any existing open connection if re-copying
+        if (!dbFile.exists() || installedVersion < CURRENT_CONTENT_VERSION) {
+            databaseInstance?.close()
+            databaseInstance = null
             copyDatabaseFromAssets(dbFile)
+            prefs.edit().putInt(KEY_INSTALLED_CONTENT_VERSION, CURRENT_CONTENT_VERSION).apply()
         }
 
         // Open writable DB to ensure FTS index exists

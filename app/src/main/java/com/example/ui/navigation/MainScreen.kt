@@ -171,7 +171,8 @@ fun MainScreen(
                     navArgument("libro") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val libro = backStackEntry.arguments?.getString("libro").orEmpty()
+                val rawLibro = backStackEntry.arguments?.getString("libro").orEmpty()
+                val libro = android.net.Uri.decode(rawLibro)
                 CapitulosScreen(
                     libro = libro,
                     viewModel = bibliaViewModel,
@@ -196,7 +197,8 @@ fun MainScreen(
                     }
                 )
             ) { backStackEntry ->
-                val libro = backStackEntry.arguments?.getString("libro").orEmpty()
+                val rawLibro = backStackEntry.arguments?.getString("libro").orEmpty()
+                val libro = android.net.Uri.decode(rawLibro)
                 val capitulo = backStackEntry.arguments?.getInt("capitulo") ?: 1
                 val targetVersiculoParam = backStackEntry.arguments?.getInt("targetVersiculo")
                 val targetVersiculo = if (targetVersiculoParam != null && targetVersiculoParam > 0) targetVersiculoParam else null

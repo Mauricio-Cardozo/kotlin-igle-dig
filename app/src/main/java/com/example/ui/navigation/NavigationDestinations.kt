@@ -35,13 +35,17 @@ object BibliaDestinations {
     const val CAPITULOS = "biblia_capitulos/{libro}"
     const val LECTURA = "biblia_lectura/{libro}/{capitulo}?targetVersiculo={targetVersiculo}"
 
-    fun capitulosRoute(libro: String): String = "biblia_capitulos/$libro"
+    fun capitulosRoute(libro: String): String {
+        val encoded = android.net.Uri.encode(libro)
+        return "biblia_capitulos/$encoded"
+    }
 
     fun lecturaRoute(libro: String, capitulo: Int, targetVersiculo: Int? = null): String {
+        val encoded = android.net.Uri.encode(libro)
         return if (targetVersiculo != null) {
-            "biblia_lectura/$libro/$capitulo?targetVersiculo=$targetVersiculo"
+            "biblia_lectura/$encoded/$capitulo?targetVersiculo=$targetVersiculo"
         } else {
-            "biblia_lectura/$libro/$capitulo"
+            "biblia_lectura/$encoded/$capitulo"
         }
     }
 }

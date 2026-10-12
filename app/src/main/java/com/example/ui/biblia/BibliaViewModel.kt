@@ -160,6 +160,9 @@ class BibliaViewModel(
         }
     }
 
+    // Cached map of all user favorites for immediate lookup
+    private var cachedFavoritosMap: Map<String, Favorito> = emptyMap()
+
     fun loadLectura(libro: String, capitulo: Int) {
         currentLibroLectura = libro
         currentCapituloLectura = capitulo
@@ -170,10 +173,9 @@ class BibliaViewModel(
                 if (versiculos.isEmpty()) {
                     _lecturaState.value = LecturaUiState.Error("No se encontraron versículos en $libro $capitulo.")
                 } else {
-                    // Fetch existing favorites
                     _lecturaState.value = LecturaUiState.Success(
                         versiculos = versiculos,
-                        favoritosMap = emptyMap()
+                        favoritosMap = cachedFavoritosMap
                     )
                 }
             } catch (e: Exception) {
@@ -186,6 +188,7 @@ class BibliaViewModel(
         viewModelScope.launch {
             repository.getFavoritosFlow().collect { favoritosList ->
                 val favMap = favoritosList.associateBy { it.id }
+                cachedFavoritosMap = favMap
                 val currentState = _lecturaState.value
                 if (currentState is LecturaUiState.Success) {
                     _lecturaState.value = currentState.copy(favoritosMap = favMap)
