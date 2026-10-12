@@ -1,0 +1,6 @@
+{
+  "name": "Iglesia Digital",
+  "description": "App católica offline con la Biblia, el Misal, el Catecismo y herramientas de oración.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
