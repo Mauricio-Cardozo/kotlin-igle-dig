@@ -148,10 +148,39 @@ class LiturgiaRepositoryTest {
     }
 
     @Test
-    fun testFecha2026_03_29_SinLectura() = runBlocking {
-        val fecha = "2026-03-29"
+    fun testLecturasDelMesOctubre2026() = runBlocking {
+        val lecturas = repository.getLecturasDelMes(2026, 10)
+        // Octubre 2026 tiene 31 días y todos tienen lectura en el rango del asset.
+        assertEquals(31, lecturas.size)
+        assertEquals("2026-10-01", lecturas.first().fecha)
+        assertEquals("2026-10-31", lecturas.last().fecha)
+        assertTrue("todas las fechas deben traer título de misa", lecturas.all { !it.tituloMisa.isNullOrBlank() })
+        assertTrue("debe haber al menos un día con evangelio", lecturas.any { it.tieneEvangelio })
+
+        val dia11 = lecturas.first { it.fecha == "2026-10-11" }
+        assertEquals("XXVIII Domingo ordinario", dia11.tituloMisa)
+        assertTrue(dia11.tieneEvangelio)
+    }
+
+    @Test
+    fun testMisalSantosDelDia() = runBlocking {
+        // 4 de octubre: San Francisco de Asís (presente en misal_santos).
+        val santos = repository.getMisalSantosDelDia(10, 4)
+        assertEquals(1, santos.size)
+        val francisco = santos.first()
+        assertTrue("nombre inesperado: ${francisco.nombre}", francisco.nombre.contains("Francisco"))
+        assertNotNull("el propio debe traer colecta", francisco.colecta)
+
+        // Un día sin propio devuelve lista vacía (no falla).
+        val vacio = repository.getMisalSantosDelDia(2, 30)
+        assertTrue(vacio.isEmpty())
+    }
+
+    @Test
+    fun testFechaSinLecturaFueraDeRango() = runBlocking {
+        val fecha = "2025-12-31" // outside DB range (2026-01-01..2026-12-02)
         val lectura = repository.getLecturaDelDia(fecha)
-        assertNull("No hay lectura para 2026-03-29 en la base", lectura)
+        assertNull("No hay lectura para $fecha en la base", lectura)
 
         val season = lectura?.tituloMisa?.let { detectSeason(it) }
         assertNull(season)

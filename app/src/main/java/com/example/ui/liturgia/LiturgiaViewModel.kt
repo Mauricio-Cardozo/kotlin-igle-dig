@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.db.Lectura
+import com.example.data.db.DiaLectura
 import com.example.data.db.MisalPropioEntry
+import com.example.data.db.MisalSantosEntry
 import com.example.data.db.Santo
 import com.example.data.repository.LiturgiaRepository
 import com.example.data.user.StreaksPreferencesRepository
@@ -54,6 +56,32 @@ data class LiturgiaUiState(
     val errorMessage: String? = null
 )
 
+/** Estado de la pantalla "Evangelio del Día". */
+data class EvangelioUiState(
+    val isLoading: Boolean = true,
+    val fecha: String = "",
+    val lectura: Lectura? = null,
+    val errorMessage: String? = null
+)
+
+/** Estado de la pantalla "Santo del Día" (detalle). */
+data class SantoDetalleUiState(
+    val isLoading: Boolean = true,
+    val santo: Santo? = null,
+    val misalSantos: List<MisalSantosEntry> = emptyList()
+)
+
+/** Estado de la pantalla "Calendario Litúrgico". */
+data class CalendarioUiState(
+    val ano: Int,
+    val mes: Int,
+    val isLoading: Boolean = true,
+    val lecturas: Map<String, DiaLectura> = emptyMap(),
+    val selectedFecha: String? = null,
+    val santosDelDia: List<Santo> = emptyList(),
+    val misalSantosDelDia: List<MisalSantosEntry> = emptyList()
+)
+
 class LiturgiaViewModel(
     private val liturgiaRepository: LiturgiaRepository,
     private val streaksRepository: StreaksPreferencesRepository,
@@ -62,6 +90,20 @@ class LiturgiaViewModel(
 
     private val _uiState = MutableStateFlow(LiturgiaUiState())
     val uiState: StateFlow<LiturgiaUiState> = _uiState.asStateFlow()
+
+    private val _evangelioState = MutableStateFlow(EvangelioUiState())
+    val evangelioState: StateFlow<EvangelioUiState> = _evangelioState.asStateFlow()
+
+    private val _santoDetalleState = MutableStateFlow(SantoDetalleUiState())
+    val santoDetalleState: StateFlow<SantoDetalleUiState> = _santoDetalleState.asStateFlow()
+
+    private val _calendarioState = MutableStateFlow(
+        CalendarioUiState(
+            ano = dateProvider.today().year,
+            mes = dateProvider.today().monthValue
+        )
+    )
+    val calendarioState: StateFlow<CalendarioUiState> = _calendarioState.asStateFlow()
 
     init {
         loadData()
@@ -144,6 +186,96 @@ class LiturgiaViewModel(
                         errorMessage = e.message ?: "Error al cargar la información litúrgica"
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Carga la lectura (Evangelio) para una fecha ISO (YYYY-MM-DD). Si [fecha] es null usa hoy.
+     */
+    fun loadEvangelio(fecha: String? = null) {
+        viewModelScope.launch {
+            val target = fecha ?: hoy(dateProvider.today())
+            _evangelioState.update { it.copy(isLoading = true, fecha = target, errorMessage = null) }
+            try {
+                val lectura = liturgiaRepository.getLecturaDelDia(target)
+                _evangelioState.update { it.copy(isLoading = false, lectura = lectura) }
+            } catch (e: Exception) {
+                _evangelioState.update {
+                    it.copy(isLoading = false, errorMessage = e.message ?: "Error al cargar el Evangelio")
+                }
+            }
+        }
+    }
+
+    /**
+     * Carga el santo por id junto con su Propio (misal_santos) del día.
+     */
+    fun loadSantoDetalle(id: Long) {
+        viewModelScope.launch {
+            _santoDetalleState.update { it.copy(isLoading = true) }
+            try {
+                val santo = liturgiaRepository.getSantoById(id)
+                val misal = if (santo != null) {
+                    liturgiaRepository.getMisalSantosDelDia(santo.mes, santo.dia)
+                } else {
+                    emptyList()
+                }
+                _santoDetalleState.update {
+                    it.copy(isLoading = false, santo = santo, misalSantos = misal)
+                }
+            } catch (e: Exception) {
+                _santoDetalleState.update { it.copy(isLoading = false, santo = null) }
+            }
+        }
+    }
+
+    /**
+     * Carga el mes indicado en el calendario. Si se omite, recarga el mes actual en estado.
+     */
+    fun loadCalendario(ano: Int = _calendarioState.value.ano, mes: Int = _calendarioState.value.mes) {
+        viewModelScope.launch {
+            _calendarioState.update { it.copy(ano = ano, mes = mes, isLoading = true) }
+            try {
+                val lecturas = liturgiaRepository.getLecturasDelMes(ano, mes)
+                _calendarioState.update {
+                    it.copy(isLoading = false, lecturas = lecturas.associateBy { d -> d.fecha })
+                }
+            } catch (e: Exception) {
+                _calendarioState.update { it.copy(isLoading = false, lecturas = emptyMap()) }
+            }
+        }
+    }
+
+    fun mesAnterior() {
+        val current = _calendarioState.value
+        val (ano, mes) = if (current.mes == 1) current.ano - 1 to 12 else current.ano to current.mes - 1
+        loadCalendario(ano, mes)
+    }
+
+    fun mesSiguiente() {
+        val current = _calendarioState.value
+        val (ano, mes) = if (current.mes == 12) current.ano + 1 to 1 else current.ano to current.mes + 1
+        loadCalendario(ano, mes)
+    }
+
+    /**
+     * Selecciona un día del calendario y carga los santos y el Propio de esa fecha.
+     */
+    fun selectDiaCalendario(fecha: String) {
+        viewModelScope.launch {
+            _calendarioState.update { it.copy(selectedFecha = fecha) }
+            try {
+                val parts = fecha.split("-")
+                val mes = parts[1].toInt()
+                val dia = parts[2].toInt()
+                val santos = liturgiaRepository.getSantosDelDia(mes, dia)
+                val misal = liturgiaRepository.getMisalSantosDelDia(mes, dia)
+                _calendarioState.update {
+                    it.copy(santosDelDia = santos, misalSantosDelDia = misal)
+                }
+            } catch (e: Exception) {
+                _calendarioState.update { it.copy(santosDelDia = emptyList(), misalSantosDelDia = emptyList()) }
             }
         }
     }

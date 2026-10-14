@@ -54,7 +54,7 @@ object BibliaDestinations {
  * Routes for destinations originating from the Home/Liturgia screen.
  */
 object LiturgiaDestinations {
-    const val EVANGELIO = "evangelio"
+    const val EVANGELIO = "evangelio?fecha={fecha}"
     const val ROSARIO_GUIA = "rosario/guia"
     const val ROSARIO_CORONILLA = "rosario/coronilla"
     const val SANTO_DETALLE = "santo/{id}"
@@ -62,4 +62,11 @@ object LiturgiaDestinations {
     const val AJUSTES = "ajustes"
 
     fun santoDetalleRoute(id: Long): String = "santo/$id"
+
+    /**
+     * Ruta del Evangelio del Día. Sin [fecha] muestra el día de hoy; con [fecha] (ISO YYYY-MM-DD)
+     * muestra las lecturas de esa fecha (por ejemplo, al tocar un día del calendario).
+     */
+    fun evangelioRoute(fecha: String? = null): String =
+        if (fecha.isNullOrBlank()) "evangelio" else "evangelio?fecha=$fecha"
 }

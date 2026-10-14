@@ -4,7 +4,9 @@ import android.database.Cursor
 import android.util.Log
 import com.example.data.db.IglesiaDatabaseHelper
 import com.example.data.db.Lectura
+import com.example.data.db.DiaLectura
 import com.example.data.db.MisalPropioEntry
+import com.example.data.db.MisalSantosEntry
 import com.example.data.db.NearestSeasonResult
 import com.example.data.db.Santo
 import com.example.data.db.TemporadaInfo
@@ -204,6 +206,88 @@ class LiturgiaRepository(
             Log.e(TAG, "Error fetching santo $id", e)
         }
         null
+    }
+
+    /**
+     * SELECT * FROM misal_santos WHERE mes = ? AND dia = ? ORDER BY id
+     * (Propio de los santos para la fecha indicada).
+     */
+    suspend fun getMisalSantosDelDia(mes: Int, dia: Int): List<MisalSantosEntry> = withContext(Dispatchers.IO) {
+        val rows = mutableListOf<MisalSantosEntry>()
+        try {
+            val db = dbHelper.getReadableDb()
+            val query = "SELECT * FROM misal_santos WHERE mes = ? AND dia = ? ORDER BY id"
+            db.rawQuery(query, arrayOf(mes.toString(), dia.toString())).use { cursor ->
+                while (cursor.moveToNext()) {
+                    rows.add(mapMisalSantos(cursor))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching misal_santos for $mes/$dia", e)
+        }
+        rows
+    }
+
+    /**
+     * Devuelve las lecturas del mes indicado (para el calendario litúrgico).
+     * Rango inclusivo [primer día del mes, último día del mes].
+     */
+    suspend fun getLecturasDelMes(ano: Int, mes: Int): List<DiaLectura> = withContext(Dispatchers.IO) {
+        val result = mutableListOf<DiaLectura>()
+        try {
+            val first = java.time.LocalDate.of(ano, mes, 1)
+            val last = first.withDayOfMonth(first.lengthOfMonth())
+            val startIso = first.toString()
+            val endIso = last.toString()
+
+            val db = dbHelper.getReadableDb()
+            val query = """
+                SELECT fecha, titulo_misa,
+                       CASE WHEN evangelio IS NOT NULL AND evangelio != '' THEN 1 ELSE 0 END AS tiene_evangelio
+                FROM lecturas
+                WHERE fecha >= ? AND fecha <= ?
+                ORDER BY fecha
+            """.trimIndent()
+            db.rawQuery(query, arrayOf(startIso, endIso)).use { cursor ->
+                val fechaCol = cursor.getColumnIndexOrThrow("fecha")
+                val tituloCol = cursor.getColumnIndexOrThrow("titulo_misa")
+                val evCol = cursor.getColumnIndexOrThrow("tiene_evangelio")
+                while (cursor.moveToNext()) {
+                    result.add(
+                        DiaLectura(
+                            fecha = cursor.getString(fechaCol),
+                            tituloMisa = if (cursor.isNull(tituloCol)) null else cursor.getString(tituloCol),
+                            tieneEvangelio = cursor.getInt(evCol) == 1
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching lecturas for $ano/$mes", e)
+        }
+        result
+    }
+
+    private fun mapMisalSantos(cursor: Cursor): MisalSantosEntry {
+        fun getStringOrNull(colName: String): String? {
+            val idx = cursor.getColumnIndex(colName)
+            return if (idx >= 0 && !cursor.isNull(idx)) cursor.getString(idx) else null
+        }
+
+        return MisalSantosEntry(
+            id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
+            mes = cursor.getInt(cursor.getColumnIndexOrThrow("mes")),
+            dia = cursor.getInt(cursor.getColumnIndexOrThrow("dia")),
+            nombre = cursor.getString(cursor.getColumnIndexOrThrow("nombre")),
+            titulo = getStringOrNull("titulo"),
+            rango = getStringOrNull("rango"),
+            antifonaEntrada = getStringOrNull("antifona_entrada"),
+            colecta = getStringOrNull("colecta"),
+            oracionOfrendas = getStringOrNull("oracion_ofrendas"),
+            prefacio = getStringOrNull("prefacio"),
+            antifonaComunion = getStringOrNull("antifona_comunion"),
+            postcomunion = getStringOrNull("postcomunion")
+        )
     }
 
     private fun mapLectura(cursor: Cursor): Lectura {

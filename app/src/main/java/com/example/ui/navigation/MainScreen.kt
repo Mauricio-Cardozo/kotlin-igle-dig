@@ -42,9 +42,12 @@ import com.example.ui.biblia.CapitulosScreen
 import com.example.ui.biblia.LecturaScreen
 import com.example.ui.biblia.LibrosScreen
 import com.example.ui.common.ComingSoonScreen
+import com.example.ui.liturgia.CalendarioScreen
+import com.example.ui.liturgia.EvangelioScreen
 import com.example.ui.liturgia.LiturgiaScreen
 import com.example.ui.liturgia.LiturgiaViewModel
 import com.example.ui.liturgia.LiturgiaViewModelFactory
+import com.example.ui.liturgia.SantoDetalleScreen
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
@@ -158,7 +161,7 @@ fun MainScreen(
             composable(BottomNavTab.LITURGIA.route) {
                 LiturgiaScreen(
                     viewModel = liturgiaViewModel,
-                    onNavigateToEvangelio = { navController.navigate(LiturgiaDestinations.EVANGELIO) },
+                    onNavigateToEvangelio = { navController.navigate(LiturgiaDestinations.evangelioRoute()) },
                     onNavigateToRosario = { navController.navigate(LiturgiaDestinations.ROSARIO_GUIA) },
                     onNavigateToCoronilla = { navController.navigate(LiturgiaDestinations.ROSARIO_CORONILLA) },
                     onNavigateToSanto = { id -> navController.navigate(LiturgiaDestinations.santoDetalleRoute(id)) },
@@ -168,11 +171,20 @@ fun MainScreen(
             }
 
             // Destinations originating from Liturgia
-            composable(LiturgiaDestinations.EVANGELIO) {
-                ComingSoonScreen(
-                    title = "Evangelio del Día",
-                    icon = Icons.Default.Church,
-                    description = "El texto completo de las lecturas y el Evangelio del día estará disponible en la próxima pantalla de lectura litúrgica.",
+            composable(
+                route = LiturgiaDestinations.EVANGELIO,
+                arguments = listOf(
+                    navArgument("fecha") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val fecha = backStackEntry.arguments?.getString("fecha")
+                EvangelioScreen(
+                    viewModel = liturgiaViewModel,
+                    fecha = fecha,
                     onBackClick = { navController.popBackStack() }
                 )
             }
@@ -200,10 +212,9 @@ fun MainScreen(
                 arguments = listOf(navArgument("id") { type = NavType.LongType })
             ) { backStackEntry ->
                 val id = backStackEntry.arguments?.getLong("id") ?: 0L
-                ComingSoonScreen(
-                    title = "Santo del Día",
-                    icon = Icons.Default.Church,
-                    description = "La biografía detallada y oraciones para el santo (ID $id) se integrarán en la próxima fase.",
+                SantoDetalleScreen(
+                    viewModel = liturgiaViewModel,
+                    santoId = id,
                     onBackClick = { navController.popBackStack() }
                 )
             }
@@ -292,10 +303,14 @@ fun MainScreen(
 
             // Calendario Tab
             composable(BottomNavTab.CALENDARIO.route) {
-                ComingSoonScreen(
-                    title = "Calendario",
-                    icon = Icons.Default.CalendarMonth,
-                    description = "El calendario litúrgico con las fiestas de los santos, solemnidades y tiempos litúrgicos estará disponible próximamente."
+                CalendarioScreen(
+                    viewModel = liturgiaViewModel,
+                    onDiaClick = { fecha ->
+                        navController.navigate(LiturgiaDestinations.evangelioRoute(fecha))
+                    },
+                    onSantoClick = { id ->
+                        navController.navigate(LiturgiaDestinations.santoDetalleRoute(id))
+                    }
                 )
             }
 

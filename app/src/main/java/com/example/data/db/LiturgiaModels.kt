@@ -49,3 +49,30 @@ data class NearestSeasonResult(
     val week: Int,
     val isSunday: Boolean
 )
+
+/**
+ * Entry from the `misal_santos` table (Proper of Saints / Misal del día del santo).
+ */
+data class MisalSantosEntry(
+    val id: Long,
+    val mes: Int,
+    val dia: Int,
+    val nombre: String,
+    val titulo: String?,
+    val rango: String?,
+    val antifonaEntrada: String?,
+    val colecta: String?,
+    val oracionOfrendas: String?,
+    val prefacio: String?,
+    val antifonaComunion: String?,
+    val postcomunion: String?
+)
+
+/**
+ * Lightweight calendar entry for a day that has readings in the `lecturas` table.
+ */
+data class DiaLectura(
+    val fecha: String,
+    val tituloMisa: String?,
+    val tieneEvangelio: Boolean
+)

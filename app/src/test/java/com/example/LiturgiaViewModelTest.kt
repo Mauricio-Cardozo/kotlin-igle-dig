@@ -5,12 +5,13 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.db.IglesiaDatabaseHelper
 import com.example.data.repository.LiturgiaRepository
 import com.example.data.user.StreaksPreferencesRepository
+import com.example.ui.liturgia.LiturgiaUiState
 import com.example.ui.liturgia.LiturgiaViewModel
 import com.example.util.FixedDateProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -62,6 +63,9 @@ class LiturgiaViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private suspend fun LiturgiaViewModel.awaitLoaded(): LiturgiaUiState =
+        uiState.first { !it.isLoading }
+
     @Test
     fun viewModel_loadsDomingoOctubre11() = runTest(testDispatcher) {
         val fixedDate = LocalDate.of(2026, 10, 11)
@@ -69,9 +73,7 @@ class LiturgiaViewModelTest {
         val dateProvider = FixedDateProvider(fixedDate, fixedTime)
 
         val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, dateProvider)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
+        val state = viewModel.awaitLoaded()
         assertEquals("Domingo, 11 de Octubre", state.fechaLarga)
         assertEquals("Bendecido día", state.saludo)
         assertEquals("XXVIII Domingo ordinario", state.misaTitle)
@@ -96,27 +98,26 @@ class LiturgiaViewModelTest {
 
         // 3 AM -> "Bendecida noche"
         val vmNight = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(3, 0)))
-        advanceUntilIdle()
+        vmNight.awaitLoaded()
         assertEquals("Bendecida noche", vmNight.uiState.value.saludo)
 
         // 14:00 (2 PM) -> "Bendecida tarde"
         val vmAfternoon = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(14, 0)))
-        advanceUntilIdle()
+        vmAfternoon.awaitLoaded()
         assertEquals("Bendecida tarde", vmAfternoon.uiState.value.saludo)
 
         // 22:00 (10 PM) -> "Bendecida noche"
         val vmLate = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(22, 0)))
-        advanceUntilIdle()
+        vmLate.awaitLoaded()
         assertEquals("Bendecida noche", vmLate.uiState.value.saludo)
     }
 
     @Test
     fun viewModel_handlesDateWithoutReadingsGracefully() = runTest(testDispatcher) {
-        val fixedDate = LocalDate.of(2026, 3, 29)
+        val fixedDate = LocalDate.of(2025, 12, 31) // outside DB range (2026-01-01..2026-12-02)
         val vm = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate))
-        advanceUntilIdle()
+        val state = vm.awaitLoaded()
 
-        val state = vm.uiState.value
         assertNull(state.misaTitle)
         assertNull(state.gospelQuote)
         assertNull(state.gospelRef)
