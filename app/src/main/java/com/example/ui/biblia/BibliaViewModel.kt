@@ -3,6 +3,7 @@ package com.example.ui.biblia
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.db.BibliaVersion
 import com.example.data.db.LibroBiblia
 import com.example.data.db.VersiculoBiblia
 import com.example.data.repository.BibliaRepository
@@ -63,6 +64,10 @@ class BibliaViewModel(
     private val _filtroTestamento = MutableStateFlow(FiltroTestamento.TODOS)
     val filtroTestamento: StateFlow<FiltroTestamento> = _filtroTestamento.asStateFlow()
 
+    // --- State: Bible version (Pueblo de Dios / Navarra) ---
+    private val _bibliaVersion = MutableStateFlow(BibliaVersion.DEFAULT)
+    val bibliaVersion: StateFlow<BibliaVersion> = _bibliaVersion.asStateFlow()
+
     // --- State: Search ---
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -93,15 +98,46 @@ class BibliaViewModel(
         )
 
     init {
+        observeVersion()
         loadLibros()
         observeFavoritos()
+    }
+
+    /**
+     * Observa la versión bíblica persistida y recarga la lista de libros (y la búsqueda activa)
+     * cuando cambia. La primera emisión con la versión por defecto no provoca recarga extra.
+     */
+    private fun observeVersion() {
+        viewModelScope.launch {
+            preferencesRepository.bibliaVersion.collect { key ->
+                val version = BibliaVersion.fromKey(key)
+                if (version != _bibliaVersion.value) {
+                    _bibliaVersion.value = version
+                    loadLibros()
+                    val query = _searchQuery.value
+                    if (query.isNotBlank()) {
+                        onSearchQueryChanged(query)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Cambia la versión bíblica activa. Se persiste y [observeVersion] se encarga de recargar.
+     */
+    fun setBibliaVersion(version: BibliaVersion) {
+        if (version == _bibliaVersion.value) return
+        viewModelScope.launch {
+            preferencesRepository.setBibliaVersion(version.key)
+        }
     }
 
     fun loadLibros() {
         viewModelScope.launch {
             _librosState.value = LibrosUiState.Loading
             try {
-                val libros = repository.getLibros()
+                val libros = repository.getLibros(_bibliaVersion.value)
                 if (libros.isEmpty()) {
                     _librosState.value = LibrosUiState.Error("No se pudieron cargar los libros.")
                 } else {
@@ -130,7 +166,7 @@ class BibliaViewModel(
             delay(300) // Debounce
             _busquedaState.value = BusquedaUiState.Searching
             try {
-                val resultados = repository.searchVersiculos(query)
+                val resultados = repository.searchVersiculos(query, _bibliaVersion.value)
                 _busquedaState.value = BusquedaUiState.Success(resultados)
             } catch (e: Exception) {
                 _busquedaState.value = BusquedaUiState.Error("Error en la búsqueda: ${e.localizedMessage}")
@@ -148,7 +184,7 @@ class BibliaViewModel(
         viewModelScope.launch {
             _capitulosState.value = CapitulosUiState.Loading
             try {
-                val caps = repository.getCapitulos(libro)
+                val caps = repository.getCapitulos(libro, _bibliaVersion.value)
                 if (caps.isEmpty()) {
                     _capitulosState.value = CapitulosUiState.Error("No se encontraron capítulos para $libro.")
                 } else {
@@ -169,7 +205,7 @@ class BibliaViewModel(
         viewModelScope.launch {
             _lecturaState.value = LecturaUiState.Loading
             try {
-                val versiculos = repository.getVersiculos(libro, capitulo)
+                val versiculos = repository.getVersiculos(libro, capitulo, _bibliaVersion.value)
                 if (versiculos.isEmpty()) {
                     _lecturaState.value = LecturaUiState.Error("No se encontraron versículos en $libro $capitulo.")
                 } else {
@@ -199,7 +235,7 @@ class BibliaViewModel(
 
     fun toggleFavorito(versiculo: VersiculoBiblia, colorHex: String) {
         viewModelScope.launch {
-            repository.toggleFavorito(versiculo, colorHex)
+            repository.toggleFavorito(versiculo, colorHex, _bibliaVersion.value)
         }
     }
 

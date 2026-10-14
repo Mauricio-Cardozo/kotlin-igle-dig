@@ -108,6 +108,7 @@ fun LecturaScreen(
 
     val state by viewModel.lecturaState.collectAsStateWithLifecycle()
     val fontMultiplier by viewModel.fontSizeMultiplier.collectAsStateWithLifecycle()
+    val bibliaVersion by viewModel.bibliaVersion.collectAsStateWithLifecycle()
 
     var showFontControls by remember { mutableStateOf(false) }
     var selectedVersiculoForHighlight by remember { mutableStateOf<VersiculoBiblia?>(null) }
@@ -226,7 +227,7 @@ fun LecturaScreen(
                                     items = s.versiculos,
                                     key = { it.id }
                                 ) { versiculo ->
-                                    val favKey = "biblia-${versiculo.id}"
+                                    val favKey = "${bibliaVersion.favoritoPrefix}${versiculo.id}"
                                     val favorito = s.favoritosMap[favKey]
 
                                     VersiculoCard(

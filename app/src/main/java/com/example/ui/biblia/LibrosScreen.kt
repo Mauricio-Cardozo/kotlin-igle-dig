@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.db.BibliaVersion
 import com.example.data.db.LibroBiblia
 import com.example.data.db.VersiculoBiblia
 import com.example.ui.common.EmptyState
@@ -75,6 +76,7 @@ fun LibrosScreen(
     val filtroTestamento by viewModel.filtroTestamento.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val busquedaState by viewModel.busquedaState.collectAsStateWithLifecycle()
+    val bibliaVersion by viewModel.bibliaVersion.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -95,10 +97,29 @@ fun LibrosScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "El Pueblo de Dios",
+                text = bibliaVersion.label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Bible Version Selector (Pueblo de Dios / Navarra)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("biblia_version_selector")
+            ) {
+                BibliaVersion.entries.forEach { version ->
+                    FiltroChipItem(
+                        label = version.label,
+                        selected = bibliaVersion == version,
+                        onClick = { viewModel.setBibliaVersion(version) },
+                        testTag = "version_${version.key}"
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

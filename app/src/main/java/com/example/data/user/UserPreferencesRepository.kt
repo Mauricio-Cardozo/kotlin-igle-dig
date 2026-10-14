@@ -5,7 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.data.db.BibliaVersion
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
@@ -13,12 +15,14 @@ import kotlin.math.roundToInt
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
 /**
- * Handles user preferences such as font size multiplier (0.8 to 1.5, default 1.0, step 0.1).
+ * Handles user preferences such as the selected Bible version and the font size multiplier
+ * (0.8 to 1.5, default 1.0, step 0.1).
  */
 class UserPreferencesRepository(private val context: Context) {
 
     companion object {
         val FONT_SIZE_MULTIPLIER_KEY = floatPreferencesKey("font_size_multiplier")
+        val BIBLIA_VERSION_KEY = stringPreferencesKey("biblia_version")
         const val DEFAULT_FONT_SCALE = 1.0f
         const val MIN_FONT_SCALE = 0.8f
         const val MAX_FONT_SCALE = 1.5f
@@ -43,6 +47,19 @@ class UserPreferencesRepository(private val context: Context) {
 
     val fontSizeMultiplier: Flow<Float> = context.dataStore.data.map { preferences ->
         preferences[FONT_SIZE_MULTIPLIER_KEY] ?: DEFAULT_FONT_SCALE
+    }
+
+    /**
+     * Selected Bible version, stored by its stable [BibliaVersion.key]. Defaults to "pueblo".
+     */
+    val bibliaVersion: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[BIBLIA_VERSION_KEY] ?: BibliaVersion.DEFAULT.key
+    }
+
+    suspend fun setBibliaVersion(versionKey: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BIBLIA_VERSION_KEY] = versionKey
+        }
     }
 
     suspend fun setFontSizeMultiplier(multiplier: Float) {
