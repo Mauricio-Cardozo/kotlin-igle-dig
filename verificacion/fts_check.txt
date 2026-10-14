@@ -1,0 +1,2 @@
+PRAGMA user_version tras copiar = 10
+tablas FTS tras initializeDatabase() = []

@@ -1,0 +1,42 @@
+===== FECHA 2026-10-11 =====
+  titulo_misa: XXVIII Domingo ordinario
+  detectSeason: ordinario  parseWeekNumber: 28  isSunday: true
+  propio_id: 284  propio_dia: XXVIII DOMINGO DEL TIEMPO ORDINARIO  temporada: ordinario
+  evangelio_ref: Lectura del santo evangelio según san Mateo
+  evangelio_prefix: Mateo 22, 1-10
+En aquel tiempo, volvió J
+  santos (3): San Juan XXIII / S. Juan XXIII, papa | S. Felipe, diácono | S. Alejandro Sauli, obispo de Pavia
+
+===== FECHA 2026-10-12 =====
+  titulo_misa: Lunes de la XXVIII semana del Tiempo ordinario
+  detectSeason: ordinario  parseWeekNumber: 28  isSunday: false
+  propio_id: 284  propio_dia: XXVIII DOMINGO DEL TIEMPO ORDINARIO  temporada: ordinario
+  evangelio_ref: null
+  evangelio_prefix: Lucas 11, 29-32
+En aquel tiempo, la mult
+  santos (3): Nuestra Señora del Pilar / Nuestra Señora de Aparecida | S. Edisto, mártir en la via Ardeatina | S. Serafín de Montegranaro, laico capuchino
+
+===== FECHA 2026-10-31 =====
+  titulo_misa: Sábado de la XXX semana del Tiempo ordinario
+  detectSeason: ordinario  parseWeekNumber: 30  isSunday: false
+  propio_id: 286  propio_dia: XXX DOMINGO DEL TIEMPO ORDINARIO  temporada: ordinario
+  evangelio_ref: Lectura del santo evangelio según san Lucas
+  evangelio_prefix: Lucas 14, 1. 7-11
+Un sábado, Jesús fue a
+  santos (1): S. Alfonso Rodríguez, religioso jesuita
+
+===== FECHA 2026-01-01 =====
+  titulo_misa: Solemnidad de María Santísima, Madre de Dios
+  detectSeason: null  parseWeekNumber: 0  isSunday: false
+  seasonFromNearest: null week=null
+  propio_id: null  propio_dia: null  temporada: null
+  evangelio_ref: Lectura del santo evangelio según san Lucas
+  evangelio_prefix: Lucas 2, 16-21
+En aquel tiempo, los past
+  santos (2): S. Vicente María Strambi, Presbítero Pasionista, obispo | Solemnidad de la Virgen María
+
+===== FECHA 2025-12-31 =====
+  lectura: NULL (sin fila en lecturas)
+  seasonFromNearest: null week=null
+  santos (2): San Silvestre I / S. Silvestre I, papa | S. Melania, matrona romana
+
