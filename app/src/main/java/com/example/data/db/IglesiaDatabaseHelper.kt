@@ -15,8 +15,14 @@ import java.io.InputStream
  * Manages the read-only Iglesia Digital SQLite database containing the Bible,
  * Missal, Catechism, etc.
  *
- * Copies the database from assets if not present, and initializes the FTS5 virtual table
- * on the first launch using a database transaction and PRAGMA user_version.
+ * Copies the database from assets if not present, and creates the FTS virtual tables
+ * used for Bible search when they are missing. The check is done directly against
+ * sqlite_master (not PRAGMA user_version), so the index is rebuilt even when the bundled
+ * asset already ships its own user_version marker.
+ *
+ * FTS4 (not FTS5) is used because the Android framework SQLite does not ship the FTS5
+ * module; FTS4/FTS3 are available on every supported API level. The React Native app can
+ * use FTS5 only because expo-sqlite bundles its own SQLite build.
  */
 class IglesiaDatabaseHelper(
     private val context: Context
@@ -26,7 +32,12 @@ class IglesiaDatabaseHelper(
         private const val TAG = "IglesiaDatabaseHelper"
         const val DATABASE_NAME = "iglesia_digital.db"
         const val DATABASE_VERSION = 1
-        private const val USER_VERSION_FTS_INITIALIZED = 1
+
+        /**
+         * FTS index table -> content table it indexes, derived from [BibliaVersion].
+         * Mirrors the React Native app, which builds an FTS table per searchable Bible version.
+         */
+        private val FTS_TABLES = BibliaVersion.entries.map { it.ftsTableName to it.tableName }
 
         // Increment this whenever assets/iglesia_digital.db is updated with new content
         const val CURRENT_CONTENT_VERSION = 1
@@ -38,7 +49,7 @@ class IglesiaDatabaseHelper(
 
     /**
      * Prepares the database by copying it from assets if not present or if an updated
-     * content version is bundled, and building the FTS5 index if not already built.
+     * content version is bundled, and building the FTS index if not already built.
      */
     suspend fun initializeDatabase(): Unit = withContext(Dispatchers.IO) {
         val dbFile = context.getDatabasePath(DATABASE_NAME)
@@ -89,37 +100,44 @@ class IglesiaDatabaseHelper(
     }
 
     private fun ensureFtsIndex(db: SQLiteDatabase) {
-        try {
-            var currentVersion = 0
-            db.rawQuery("PRAGMA user_version", null).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    currentVersion = cursor.getInt(0)
+        for ((ftsTable, contentTable) in FTS_TABLES) {
+            try {
+                if (ftsTableExists(db, ftsTable)) {
+                    Log.d(TAG, "FTS table $ftsTable already exists.")
+                    continue
                 }
-            }
 
-            if (currentVersion < USER_VERSION_FTS_INITIALIZED) {
-                Log.d(TAG, "Building FTS5 table biblia_pueblo_dios_fts...")
+                Log.d(TAG, "Building FTS table $ftsTable from $contentTable...")
                 db.beginTransaction()
                 try {
+                    // FTS4 external-content table: it reads columns from the content table
+                    // and keeps the docid in sync with the content table's rowid.
                     db.execSQL(
-                        """
-                        CREATE VIRTUAL TABLE IF NOT EXISTS biblia_pueblo_dios_fts USING fts5(
-                            libro, texto, content='biblia_pueblo_dios', content_rowid='id'
-                        );
-                        """.trimIndent()
+                        "CREATE VIRTUAL TABLE IF NOT EXISTS $ftsTable " +
+                            "USING fts4(libro, texto, content='$contentTable');"
                     )
-                    db.execSQL("INSERT INTO biblia_pueblo_dios_fts(biblia_pueblo_dios_fts) VALUES('rebuild');")
-                    db.execSQL("PRAGMA user_version = $USER_VERSION_FTS_INITIALIZED;")
+                    db.execSQL("INSERT INTO $ftsTable($ftsTable) VALUES('rebuild');")
                     db.setTransactionSuccessful()
-                    Log.d(TAG, "FTS5 table created and rebuilt successfully.")
+                    Log.d(TAG, "FTS table $ftsTable created and rebuilt successfully.")
                 } finally {
                     db.endTransaction()
                 }
-            } else {
-                Log.d(TAG, "FTS5 table already initialized (user_version = $currentVersion).")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed creating FTS table $ftsTable, will fallback to LIKE query if needed", e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed creating FTS5 table, will fallback to LIKE query if needed", e)
+        }
+    }
+
+    /**
+     * Returns true if the given table already exists in the database. Used instead of
+     * PRAGMA user_version because the bundled asset ships its own user_version (10).
+     */
+    private fun ftsTableExists(db: SQLiteDatabase, table: String): Boolean {
+        db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            arrayOf(table)
+        ).use { cursor ->
+            return cursor.moveToFirst()
         }
     }
 
