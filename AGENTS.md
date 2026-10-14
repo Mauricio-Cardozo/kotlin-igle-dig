@@ -1,4 +1,4 @@
-# CLAUDE.md — Iglesia Digital (Android / Kotlin + Jetpack Compose)
+# AGENTS.md — Iglesia Digital (Android / Kotlin + Jetpack Compose)
 
 ## 1. Descripción del Proyecto
 **Iglesia Digital** es una aplicación católica offline para Android desarrollada de forma nativa en **Kotlin** y **Jetpack Compose**.
@@ -35,7 +35,7 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
     │   Navarra)           │   │ · Notas & Colores │   │ · Notificaciones│
     │ · Misal, Lecturas    │   │ · Tags de usuario │   │ · Silencio      │
     │ · Santos, Catecismo  │   │                   │   │                 │
-    │ · Tablas FTS5        │   │                   │   │                 │
+    │ · Tablas FTS4        │   │                   │   │                 │
     └──────────────────────┘   └───────────────────┘   └─────────────────┘
 ```
 
@@ -43,7 +43,8 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 - **Archivo**: `app/src/main/assets/iglesia_digital.db` (~17 MB en su versión completa funcional).
 - **Acceso**: `android.database.sqlite.SQLiteDatabase` vía `IglesiaDatabaseHelper`.
 - **Propósito**: Base de datos precompilada que se copia a la carpeta interna de la app (`context.getDatabasePath(...)`) en el primer inicio.
-- **Búsqueda rápida**: Índices virtuales `FTS5` (`biblia_pueblo_dios_fts`, `biblia_navarra_fts`, `misal_propio_fts`, etc.) con fallback automático a consultas `LIKE` si FTS5 no está disponible.
+- **Búsqueda rápida**: Índices virtuales **FTS4** por versión bíblica (`biblia_pueblo_dios_fts`, `biblia_navarra_fts`), creados al arrancar si faltan (chequeo contra `sqlite_master`, no `PRAGMA user_version`, para no pisar el `user_version` del asset). Con *fallback* automático a `LIKE` si el índice no está disponible.
+- **FTS4, no FTS5**: el SQLite del framework Android no incluye el módulo FTS5; sólo FTS4/FTS3. La app React Native puede usar FTS5 porque `expo-sqlite` empaqueta su propio SQLite. Consecuencia: FTS4 no tiene columna `rank` (bm25), así que la búsqueda ordena por `id`.
 - **Razón técnica**: Evita el overhead de generación de código y esquemas de Room en una base de datos de contenido masiva y de solo lectura que ya cuenta con un esquema SQLite maduro.
 
 ### 2.2. Room para Datos del Usuario (`UserDatabase`)
@@ -56,8 +57,9 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 ### 2.3. DataStore Preferences para Configuración (`UserPreferencesRepository`)
 - **Archivo**: `user_preferences.preferences_pb` vía `androidx.datastore.preferences`.
 - **Claves gestionadas**:
+  - `biblia_version`: Versión bíblica activa (`pueblo` / `navarra`), defecto `pueblo`.
   - `font_size_multiplier`: Multiplicador de escala de fuente (0.8f a 1.5f, pasos de 0.1f, defecto 1.0f).
-  - Preferencias de notificaciones y modo silencio.
+  - (Pendiente) Preferencias de notificaciones y modo silencio.
 
 ### 2.4. Inyección de Dependencias
 - Inyección manual limpia mediante contenedor: `AppContainer` y `DefaultAppContainer` instanciados en `IglesiaApplication`.
@@ -96,7 +98,7 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 - **JDK**: Java 17 o superior (compatible con AGP 9.x y Kotlin 2.2+).
 - **Android SDK**: Build-Tools y Platform SDK instalado (API 34/36).
 
-### Comandos de Compilación (una vez restaurado el Gradle Wrapper)
+### Comandos de Compilación
 - **Compilar APK Debug**:
   ```bash
   ./gradlew assembleDebug
@@ -130,9 +132,38 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 
 | Fase | Descripción | Estado | Detalle |
 | :--- | :--- | :---: | :--- |
-| **Fase 1: Fundación y Configuración Base** | Setup de arquitectura, SQLite helper, Room, DataStore, DI y tema Compose. | 🟡 **80%** | Arquitectura funcional creada; pendiente restaurar Gradle Wrapper, corregir signing de debug, sanear dependencias no usadas y migrar paquete a `com.iglesiadigital.app`. |
-| **Fase 2: Sagrada Biblia** | Selector de libros (AT/NT), selector de capítulos, lector de versículos con ajuste de tipografía, búsqueda FTS5 y favoritos/subrayados. | 🟡 **70%** | Flujo completo de Pueblo de Dios y UI listos; pendiente reemplazar la DB truncada (3.7 MB -> 17 MB) y agregar selector para Biblia de Navarra. |
-| **Fase 3: Liturgia y Misal Romano** | Pantalla principal (Home), tiempo y color litúrgico, lecturas del día, ordinario de la misa, prefacios, plegarias eucarísticas y propio. | 🔴 **0%** | Actualmente `ComingSoonScreen`. Requiere replicar lógica de tiempo litúrgico (`seasons.ts`) y consultas a tablas `lecturas`, `misal_*`. |
-| **Fase 4: Oración y Devocionario** | Hub de oración, Santo Rosario interactivo con cuentas y misterios guiados, Coronilla de la Divina Misericordia, novenas, jaculatorias y rachas. | 🔴 **0%** | Actualmente `ComingSoonScreen`. Se requiere migrar runners interactivos y datasets estáticos (`prayers.ts`, `rosario-steps.ts`, etc.). |
-| **Fase 5: Calendario Litúrgico y Santos** | Vista de calendario mensual litúrgico, santos del día, buscador de santos y fichas biográficas. | 🔴 **0%** | Actualmente `ComingSoonScreen`. Requiere consultas sobre `santos` y `misal_santos`. |
-| **Fase 6: Favoritos, Ajustes y Utilidades** | Pantalla de favoritos con filtrado por tipo y tags, pantalla de ajustes, importación/exportación JSON y diagnóstico de base de datos. | 🔴 **10%** | Entidades Room y DataStore implementados; faltan pantallas Compose completas y lógica de backup/restore. |
+| **Fase 1: Fundación y Configuración Base** | Setup de arquitectura, SQLite helper, Room, DataStore, DI y tema Compose. | 🟢 **90%** | Arquitectura funcional; Gradle Wrapper incluido y firmas resueltas. Pendiente: renombrar paquete `com.example` → `com.iglesiadigital.app` y sanear dependencias no usadas (Firebase/Camera/Retrofit comentadas). |
+| **Fase 2: Sagrada Biblia** | Selector de libros (AT/NT), selector de capítulos, lector de versículos con tipografía, búsqueda y favoritos/subrayados. | 🟢 **100%** | Flujo completo para **dos versiones** (Pueblo de Dios y Navarra), selector persistido, búsqueda FTS4 con fallback `LIKE` y **favoritos versionados** (`biblia-<version>-<id>`). |
+| **Fase 3: Liturgia y Misal Romano** | Home, tiempo y color litúrgico, lecturas del día, Evangelio, Calendario, Santos, Ordinario, Prefacios, Plegarias y Propio. | 🟡 **60%** | Hecho: Home, lecturas del día, Evangelio por fecha, Calendario y detalle de Santo. Falta el Misal (Ordinario, Prefacios, Plegarias, Guía, Propio). |
+| **Fase 4: Oración y Devocionario** | Hub de oración, Rosario interactivo, Coronilla, novenas, jaculatorias y rachas de oración. | 🔴 **0%** | `ComingSoonScreen`. Requiere migrar los runners interactivos y datasets estáticos del RN (`prayers.ts`, `rosario-steps.ts`, etc.). |
+| **Fase 5: Calendario Litúrgico y Santos** | Calendario mensual, santos del día y fichas biográficas. | 🟢 **100%** | `CalendarioScreen` (grilla mensual + días con lectura) y `SantoDetalleScreen` (biografía + Propio de `misal_santos`). |
+| **Fase 6: Favoritos, Ajustes y Utilidades** | Pantalla de favoritos con filtros/tags, ajustes, import/export JSON y diagnóstico. | 🔴 **10%** | Entidades Room y DataStore listos; faltan las pantallas Compose y la lógica de backup/restore. |
+
+---
+
+## 6. Decisiones de Diseño (por qué)
+
+- **FTS4 en vez de FTS5**: el SQLite del framework Android no trae FTS5. `expo-sqlite` (RN) sí, por eso la app de referencia usa FTS5. Se optó por FTS4 *external content* con `rebuild` y *fallback* a `LIKE` para no romper la búsqueda nunca.
+- **Chequeo por `sqlite_master`, no `PRAGMA user_version`**: el asset ya viene con `user_version = 10` (migraciones de la app RN). Usar `user_version` como marcador de "FTS inicializado" haría que el índice nunca se creara en un asset que ya lo trae seteado.
+- **Room para datos de usuario y SQLite crudo para contenido**: el contenido es masivo, de solo lectura y con esquema maduro (no conviene el codegen de Room); los datos del usuario son pequeños, relacionales (favoritos ↔ tags) y se benefician de `Flow` reactivo.
+- **Versión de Biblia en DataStore como estado local del ViewModel, sin Context global**: mismo criterio que el RN (que usa AsyncStorage local, no un Context). Evita infraestructura multi-versión especulativa.
+- **Favoritos versionados (`biblia-pueblo-<id>`)**: un mismo `id` numérico existe en ambas tablas bíblicas, así que la clave del favorito debe incluir la versión. Migración Room 1→2 convierte las claves antiguas `biblia-<id>` → `biblia-pueblo-<id>`.
+- **`namespace = com.example` vs `applicationId = com.iglesiadigital.app`**: el namespace del código sigue en `com.example` (plantilla de AI Studio); el `applicationId` real ya es `com.iglesiadigital.app`. Renombrar el paquete queda como tarea de Fase 1.
+
+---
+
+## 7. Convención de Commits
+
+Conventional Commits en español, con cuerpo que explica el **por qué**:
+
+```
+<tipo>(<ámbito>): <resumen imperativo, ≤72 chars>
+
+Por qué: <problema o razón del cambio>
+
+- <cambio concreto>
+```
+
+- Tipos: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`, `delete`, `redesign`.
+- Ámbitos: `biblia`, `liturgia`, `misal`, `oracion`, `catecismo`, `ui`, `db`, `data`, `nav`, `build`.
+- Cada commit compila y deja los tests en verde. Los cambios de esquema (Room/SQLite) van en su propio commit.
