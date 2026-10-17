@@ -9,6 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,7 +46,13 @@ fun AppInitializer(appContainer: AppContainer) {
     var isInitialized by remember { mutableStateOf(false) }
     var initError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
+    // Clave de reintento: al incrementarla, el LaunchedEffect vuelve a ejecutarse.
+    // Sin ella, "Reintentar" limpiaba el error pero la inicialización no se relanzaba.
+    var retryKey by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(retryKey) {
+        initError = null
+        isInitialized = false
         try {
             appContainer.iglesiaDatabaseHelper.initializeDatabase()
             isInitialized = true
@@ -58,10 +65,7 @@ fun AppInitializer(appContainer: AppContainer) {
         initError != null -> {
             ErrorState(
                 message = initError!!,
-                onRetry = {
-                    initError = null
-                    isInitialized = false
-                }
+                onRetry = { retryKey++ }
             )
         }
         !isInitialized -> {
