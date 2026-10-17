@@ -23,6 +23,9 @@ class BibliaRepository(
     companion object {
         private const val TAG = "BibliaRepository"
 
+        /** Cantidad de versículos por página de búsqueda. */
+        const val SEARCH_PAGE_SIZE = 50
+
         /**
          * Builds an FTS4 search expression from the raw user input: each whitespace-separated
          * token is stripped of quotes and asterisks and wrapped in double quotes with a
@@ -114,16 +117,19 @@ class BibliaRepository(
      * 4) Búsqueda (FTS4) sobre la versión indicada:
      *    SELECT v.* FROM <version table> v
      *    JOIN <version fts> f ON v.id = f.rowid
-     *    WHERE <version fts> MATCH ? ORDER BY v.id LIMIT 50
+     *    WHERE <version fts> MATCH ? ORDER BY v.id LIMIT ? OFFSET ?
      *
      * FTS4 is used instead of FTS5 because the Android framework SQLite does not include the
      * FTS5 module. Unlike FTS5, FTS4 has no bm25 "rank" column, so results are ordered by id.
      *
+     * [limit] and [offset] paginate the results ([SEARCH_PAGE_SIZE] per page by default).
      * Falls back gracefully to LIKE search if FTS is unavailable or fails. Never crashes.
      */
     suspend fun searchVersiculos(
         rawQuery: String,
-        version: BibliaVersion = BibliaVersion.DEFAULT
+        version: BibliaVersion = BibliaVersion.DEFAULT,
+        limit: Int = SEARCH_PAGE_SIZE,
+        offset: Int = 0
     ): List<VersiculoBiblia> = withContext(Dispatchers.IO) {
         val ftsTerm = buildFtsQuery(rawQuery)
         if (ftsTerm.isBlank()) return@withContext emptyList()
@@ -140,9 +146,9 @@ class BibliaRepository(
                 JOIN $ftsTable f ON v.id = f.rowid
                 WHERE $ftsTable MATCH ?
                 ORDER BY v.id
-                LIMIT 50
+                LIMIT ? OFFSET ?
             """.trimIndent()
-            db.rawQuery(query, arrayOf(ftsTerm)).use { cursor ->
+            db.rawQuery(query, arrayOf(ftsTerm, limit.toString(), offset.toString())).use { cursor ->
                 mapVersiculos(cursor, result)
             }
         } catch (e: Exception) {
@@ -156,9 +162,12 @@ class BibliaRepository(
                     FROM $table
                     WHERE texto LIKE ? OR libro LIKE ?
                     ORDER BY id
-                    LIMIT 50
+                    LIMIT ? OFFSET ?
                 """.trimIndent()
-                db.rawQuery(query, arrayOf(likeParam, likeParam)).use { cursor ->
+                db.rawQuery(
+                    query,
+                    arrayOf(likeParam, likeParam, limit.toString(), offset.toString())
+                ).use { cursor ->
                     mapVersiculos(cursor, result)
                 }
             } catch (fallbackError: Exception) {

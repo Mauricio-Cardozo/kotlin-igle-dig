@@ -13,7 +13,7 @@ Es el port directo de la app de referencia en **React Native / Expo** ([`bible-a
 
 - **Sagrada Biblia** — navegación en 3 niveles (Libros → Capítulos → Lectura de versículos)
   - **Dos traducciones**: *El Pueblo de Dios* y *Biblia de Navarra*, con **selector persistente** (DataStore).
-  - **Búsqueda de texto completo** (FTS4 `unicode61 "remove_diacritics=1"` con *fallback* a `LIKE`): ignora acentos y mayúsculas («jesus» encuentra «Jesús») y encuentra prefijos («amor» → «amores»).
+  - **Búsqueda de texto completo** (FTS4 `unicode61 "remove_diacritics=1"` con *fallback* a `LIKE`): ignora acentos y mayúsculas («jesus» encuentra «Jesús»), encuentra prefijos («amor» → «amores») y pagina de a 50 resultados con «Ver más».
   - **Favoritos y resaltados** versionados (`biblia-pueblo-<id>` / `biblia-navarra-<id>`) sobre Room.
   - **Tamaño de letra** ajustable (0.8×–1.5×) y **compartir versículo** vía `Intent`.
 - **Home / Liturgia** — Hero con saludo contextual, tiempo y **color litúrgico**, evangelio destacado, **santo del día** y **rachas** 🔥.
@@ -140,7 +140,7 @@ El wrapper de Gradle está incluido (`./gradlew`), no hace falta instalar Gradle
 ./gradlew lintDebug
 ```
 
-Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real (acentos, prefijos y reconstrucción del índice), la versión Navarra, el Calendario y el flujo Home → Calendario → Evangelio.
+Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real (acentos, prefijos, paginación y reconstrucción del índice), la versión Navarra, el Calendario y el flujo Home → Calendario → Evangelio.
 
 ---
 

@@ -48,7 +48,13 @@ sealed interface LecturaUiState {
 sealed interface BusquedaUiState {
     data object Idle : BusquedaUiState
     data object Searching : BusquedaUiState
-    data class Success(val resultados: List<VersiculoBiblia>) : BusquedaUiState
+    data class Success(
+        val resultados: List<VersiculoBiblia>,
+        /** true cuando puede haber más resultados además de los cargados. */
+        val hayMas: Boolean = false,
+        /** true mientras se carga la página siguiente. */
+        val cargandoMas: Boolean = false
+    ) : BusquedaUiState
     data class Error(val message: String) : BusquedaUiState
 }
 
@@ -76,6 +82,7 @@ class BibliaViewModel(
     val busquedaState: StateFlow<BusquedaUiState> = _busquedaState.asStateFlow()
 
     private var searchJob: Job? = null
+    private var loadMoreJob: Job? = null
 
     // --- State: Capítulos ---
     private val _capitulosState = MutableStateFlow<CapitulosUiState>(CapitulosUiState.Loading)
@@ -156,6 +163,7 @@ class BibliaViewModel(
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
         searchJob?.cancel()
+        loadMoreJob?.cancel()
 
         if (query.isBlank()) {
             _busquedaState.value = BusquedaUiState.Idle
@@ -167,9 +175,44 @@ class BibliaViewModel(
             _busquedaState.value = BusquedaUiState.Searching
             try {
                 val resultados = repository.searchVersiculos(query, _bibliaVersion.value)
-                _busquedaState.value = BusquedaUiState.Success(resultados)
+                _busquedaState.value = BusquedaUiState.Success(
+                    resultados = resultados,
+                    hayMas = resultados.size == BibliaRepository.SEARCH_PAGE_SIZE
+                )
             } catch (e: Exception) {
                 _busquedaState.value = BusquedaUiState.Error("Error en la búsqueda: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    /**
+     * Carga la página siguiente de resultados y la agrega debajo de lo ya mostrado.
+     * Se ignora si no hay más páginas o si ya hay una carga en curso.
+     */
+    fun loadMoreResultados() {
+        val actual = _busquedaState.value
+        if (actual !is BusquedaUiState.Success || !actual.hayMas || actual.cargandoMas) return
+        // Si hay un debounce o una búsqueda en curso, esperar: la página se pediría con el
+        // offset de resultados que ya no corresponden a la consulta actual.
+        if (searchJob?.isActive == true) return
+        val query = _searchQuery.value
+        if (query.isBlank()) return
+
+        loadMoreJob = viewModelScope.launch {
+            _busquedaState.value = actual.copy(cargandoMas = true)
+            try {
+                val nuevos = repository.searchVersiculos(
+                    rawQuery = query,
+                    version = _bibliaVersion.value,
+                    offset = actual.resultados.size
+                )
+                _busquedaState.value = BusquedaUiState.Success(
+                    resultados = actual.resultados + nuevos,
+                    hayMas = nuevos.size == BibliaRepository.SEARCH_PAGE_SIZE
+                )
+            } catch (e: Exception) {
+                // Conserva lo ya mostrado; solo deja de girar el indicador.
+                _busquedaState.value = actual.copy(cargandoMas = false)
             }
         }
     }
@@ -178,6 +221,7 @@ class BibliaViewModel(
         _searchQuery.value = ""
         _busquedaState.value = BusquedaUiState.Idle
         searchJob?.cancel()
+        loadMoreJob?.cancel()
     }
 
     fun loadCapitulos(libro: String) {

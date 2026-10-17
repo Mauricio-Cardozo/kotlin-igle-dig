@@ -1,5 +1,6 @@
 package com.example.ui.biblia
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,14 +25,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -210,7 +214,8 @@ fun LibrosScreen(
                 // Show Search Results
                 SearchResultsView(
                     state = busquedaState,
-                    onResultClick = onSearchResultClick
+                    onResultClick = onSearchResultClick,
+                    onLoadMore = viewModel::loadMoreResultados
                 )
             } else {
                 // Show Books List
@@ -375,7 +380,8 @@ private fun BookItemCard(
 @Composable
 private fun SearchResultsView(
     state: BusquedaUiState,
-    onResultClick: (String, Int, Int) -> Unit
+    onResultClick: (String, Int, Int) -> Unit,
+    onLoadMore: () -> Unit
 ) {
     when (state) {
         is BusquedaUiState.Idle -> {
@@ -404,7 +410,11 @@ private fun SearchResultsView(
                 ) {
                     item {
                         Text(
-                            text = "${state.resultados.size} resultados encontrados",
+                            text = if (state.hayMas) {
+                                "Mostrando ${state.resultados.size} resultados"
+                            } else {
+                                "${state.resultados.size} resultados encontrados"
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = GoldLight,
                             modifier = Modifier.padding(vertical = 4.dp)
@@ -418,6 +428,37 @@ private fun SearchResultsView(
                             versiculo = versiculo,
                             onClick = { onResultClick(versiculo.libro, versiculo.capitulo, versiculo.versiculo) }
                         )
+                    }
+                    if (state.hayMas) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (state.cargandoMas) {
+                                    CircularProgressIndicator(
+                                        color = GoldPrimary,
+                                        strokeWidth = 3.dp,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .testTag("load_more_progress")
+                                    )
+                                } else {
+                                    OutlinedButton(
+                                        onClick = onLoadMore,
+                                        border = BorderStroke(1.dp, GoldPrimary),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = GoldLight
+                                        ),
+                                        modifier = Modifier.testTag("load_more_button")
+                                    ) {
+                                        Text("Ver más resultados")
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
