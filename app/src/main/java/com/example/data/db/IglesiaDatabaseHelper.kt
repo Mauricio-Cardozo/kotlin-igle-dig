@@ -62,7 +62,8 @@ class IglesiaDatabaseHelper(
         }
 
         // Increment this whenever assets/iglesia_digital.db is updated with new content
-        const val CURRENT_CONTENT_VERSION = 1
+        // v2: lecturas regeneradas (2026 corregido, cobertura hasta 2027-01-02)
+        const val CURRENT_CONTENT_VERSION = 2
         private const val PREFS_NAME = "iglesia_db_prefs"
         private const val KEY_INSTALLED_CONTENT_VERSION = "installed_content_version"
     }
