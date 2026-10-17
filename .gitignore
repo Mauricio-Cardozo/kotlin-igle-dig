@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Artefactos WAL del asset (se consolidan con PRAGMA wal_checkpoint antes de commitear)
+app/src/main/assets/*.db-shm
+app/src/main/assets/*.db-wal
+__pycache__/
