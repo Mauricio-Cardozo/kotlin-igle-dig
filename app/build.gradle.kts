@@ -22,8 +22,8 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
-  // Do not remove or modify these signingConfigs. They are necessary for building, installing,
-  // and updating Android apps in AI Studio.
+  // El signing config de release se reemplaza en el Hito 5 por un keystore propio
+  // (fuera del repo, contraseñas por variables de entorno).
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
@@ -31,12 +31,6 @@ android {
       storePassword = System.getenv("STORE_PASSWORD")
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
-    }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
     }
   }
 
@@ -49,11 +43,8 @@ android {
       // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
-    debug {
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
-      signingConfig = signingConfigs.getByName("debugConfig")
-    }
+    // El build type `debug` queda sin signingConfig propio: AGP lo firma con su
+    // keystore automático (~/.android/debug.keystore).
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
