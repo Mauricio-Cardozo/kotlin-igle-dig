@@ -178,7 +178,7 @@ class LiturgiaRepositoryTest {
 
     @Test
     fun testFechaSinLecturaFueraDeRango() = runBlocking {
-        val fecha = "2025-12-31" // outside DB range (2026-01-01..2026-12-02)
+        val fecha = "2025-12-31" // outside DB range (2026-01-01..2027-01-02)
         val lectura = repository.getLecturaDelDia(fecha)
         assertNull("No hay lectura para $fecha en la base", lectura)
 
