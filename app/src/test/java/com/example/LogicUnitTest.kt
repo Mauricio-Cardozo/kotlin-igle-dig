@@ -8,17 +8,17 @@ import org.junit.Test
 class LogicUnitTest {
 
     @Test
-    fun buildFtsQuery_singleWord_quotedCorrectly() {
+    fun buildFtsQuery_singleWord_quotedAsPrefix() {
         val query = "amor"
-        val expected = "\"amor\""
+        val expected = "\"amor*\""
         val actual = BibliaRepository.buildFtsQuery(query)
         assertEquals(expected, actual)
     }
 
     @Test
-    fun buildFtsQuery_multipleWords_separatedAndQuoted() {
+    fun buildFtsQuery_multipleWords_allPrefixes() {
         val query = "amor prójimo"
-        val expected = "\"amor\" \"prójimo\""
+        val expected = "\"amor*\" \"prójimo*\""
         val actual = BibliaRepository.buildFtsQuery(query)
         assertEquals(expected, actual)
     }
@@ -26,9 +26,17 @@ class LogicUnitTest {
     @Test
     fun buildFtsQuery_extraSpacesAndQuotes_cleanedAndJoined() {
         val query = "   \"amor\"    prójimo   paz  "
-        val expected = "\"amor\" \"prójimo\" \"paz\""
+        val expected = "\"amor*\" \"prójimo*\" \"paz*\""
         val actual = BibliaRepository.buildFtsQuery(query)
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun buildFtsQuery_userAsterisks_areStripped_neverInjected() {
+        // La estrella que escribe el usuario se limpia y se agrega solo la propia del prefijo.
+        assertEquals("\"amor*\"", BibliaRepository.buildFtsQuery("am*or"))
+        assertEquals("\"paz*\"", BibliaRepository.buildFtsQuery("* paz"))
+        assertEquals("", BibliaRepository.buildFtsQuery("*"))
     }
 
     @Test

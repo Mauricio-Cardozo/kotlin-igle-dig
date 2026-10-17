@@ -24,17 +24,21 @@ class BibliaRepository(
         private const val TAG = "BibliaRepository"
 
         /**
-         * Builds an FTS search term by splitting the input string into whitespace-separated tokens,
-         * escaping any quotes, and enclosing each token in double quotes, joined by spaces.
-         * Example: 'amor prójimo' -> '"amor" "prójimo"'
+         * Builds an FTS4 search expression from the raw user input: each whitespace-separated
+         * token is stripped of quotes and asterisks and wrapped in double quotes with a
+         * trailing prefix star *inside* the quotes, so every word matches as a prefix.
+         * Example: 'amor' -> '"amor*"' (this also matches 'amores', 'amoroso', ...).
+         *
+         * The star must live inside the quotes for FTS4 to treat it as a prefix search.
+         * Removing quote/star characters first means user input can never inject FTS syntax.
          */
         fun buildFtsQuery(rawQuery: String): String {
             val words = rawQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
             if (words.isEmpty()) return ""
-            return words.joinToString(" ") { word ->
-                val cleaned = word.replace("\"", "")
-                "\"$cleaned\""
-            }
+            return words
+                .map { word -> word.replace("\"", "").replace("*", "").trim() }
+                .filter { it.isNotBlank() }
+                .joinToString(" ") { cleaned -> "\"$cleaned*\"" }
         }
     }
 
