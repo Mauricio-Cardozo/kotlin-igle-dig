@@ -192,6 +192,9 @@ class BibliaViewModel(
     fun loadMoreResultados() {
         val actual = _busquedaState.value
         if (actual !is BusquedaUiState.Success || !actual.hayMas || actual.cargandoMas) return
+        // Si hay un debounce o una búsqueda en curso, esperar: la página se pediría con el
+        // offset de resultados que ya no corresponden a la consulta actual.
+        if (searchJob?.isActive == true) return
         val query = _searchQuery.value
         if (query.isBlank()) return
 
