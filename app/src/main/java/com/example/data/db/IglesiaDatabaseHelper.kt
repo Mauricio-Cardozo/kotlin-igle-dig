@@ -51,6 +51,16 @@ class IglesiaDatabaseHelper(
         /** Fragment used to detect indexes already built with the tokenizer above. */
         private const val FTS_TOKENIZER_MARK = "remove_diacritics=1"
 
+        /**
+         * Indexes that speed up the per-book/per-chapter queries, one per Bible version.
+         * Created lazily with IF NOT EXISTS so existing installations get them without
+         * re-copying the asset.
+         */
+        private val CONTENT_INDEXES = BibliaVersion.entries.map {
+            "CREATE INDEX IF NOT EXISTS idx_${it.tableName}_lcv " +
+                "ON ${it.tableName}(libro, capitulo, versiculo)"
+        }
+
         // Increment this whenever assets/iglesia_digital.db is updated with new content
         const val CURRENT_CONTENT_VERSION = 1
         private const val PREFS_NAME = "iglesia_db_prefs"
@@ -85,6 +95,7 @@ class IglesiaDatabaseHelper(
         databaseInstance = db
 
         ensureFtsIndex(db)
+        ensureIndexes(db)
     }
 
     private fun copyDatabaseFromAssets(dbFile: File) {
@@ -162,6 +173,21 @@ class IglesiaDatabaseHelper(
             arrayOf(table)
         ).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+    }
+
+    /**
+     * Creates the book/chapter/verse indexes when they are missing. Idempotent: every later
+     * launch is a no-op, and existing installations get the indexes without re-copying the
+     * 17 MB asset. If one fails, the app keeps working (queries just fall back to a full scan).
+     */
+    private fun ensureIndexes(db: SQLiteDatabase) {
+        for (statement in CONTENT_INDEXES) {
+            try {
+                db.execSQL(statement)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed creating index ($statement), queries will keep using a full scan", e)
+            }
         }
     }
 
