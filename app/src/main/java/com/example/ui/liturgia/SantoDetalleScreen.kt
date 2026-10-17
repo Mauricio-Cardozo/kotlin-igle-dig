@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -68,7 +67,6 @@ fun SantoDetalleScreen(
                         Text(
                             text = state.santo?.nombre ?: "Santo",
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Serif,
                             color = GoldLight,
                             fontWeight = FontWeight.Bold
                         )
@@ -158,7 +156,7 @@ private fun MisalSantoBlock(entry: MisalSantosEntry) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(NavySurface)
             .padding(16.dp)
             .padding(bottom = 4.dp)

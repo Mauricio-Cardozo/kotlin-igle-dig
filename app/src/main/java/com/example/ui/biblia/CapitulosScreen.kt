@@ -32,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,7 +70,6 @@ fun CapitulosScreen(
                         Text(
                             text = libro,
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Serif,
                             color = GoldLight,
                             fontWeight = FontWeight.Bold
                         )
@@ -174,7 +172,6 @@ private fun CapituloGridItem(
             Text(
                 text = "$capitulo",
                 style = MaterialTheme.typography.titleLarge,
-                fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.Bold,
                 color = GoldPrimary
             )

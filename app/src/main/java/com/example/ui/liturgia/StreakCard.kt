@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavySurface
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -26,7 +27,7 @@ fun StreakCard(
     onPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(Radii.lg)
 
     Column(
         modifier = modifier

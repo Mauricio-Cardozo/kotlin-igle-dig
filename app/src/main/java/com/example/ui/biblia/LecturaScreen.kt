@@ -55,7 +55,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,7 +74,7 @@ import com.example.ui.theme.NavySurfaceElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
-// 6 Highlight color palettes (Hex string & Display Color)
+// 6 Highlight color palettes (alpha 0x30, igual que la app RN)
 data class HighlightColorOption(
     val name: String,
     val hex: String,
@@ -83,12 +82,12 @@ data class HighlightColorOption(
 )
 
 val HighlightOptions = listOf(
-    HighlightColorOption("Dorado Sacro", "#55C9A84C", Color(0x55C9A84C)),
-    HighlightColorOption("Esmeralda Esperanza", "#552E7D32", Color(0x552E7D32)),
-    HighlightColorOption("Rubí Pasión", "#55C62828", Color(0x55C62828)),
-    HighlightColorOption("Azul Mariano", "#551565C0", Color(0x551565C0)),
-    HighlightColorOption("Púrpura Adviento", "#557B1FA2", Color(0x557B1FA2)),
-    HighlightColorOption("Ámbar Pentecostés", "#55E65100", Color(0x55E65100))
+    HighlightColorOption("Dorado Sacro", "#30E8C97A", Color(0x30E8C97A)),
+    HighlightColorOption("Esmeralda Esperanza", "#304CAF50", Color(0x304CAF50)),
+    HighlightColorOption("Rubí Pasión", "#30E07070", Color(0x30E07070)),
+    HighlightColorOption("Azul Mariano", "#302196F3", Color(0x302196F3)),
+    HighlightColorOption("Púrpura Adviento", "#307B3FAF", Color(0x307B3FAF)),
+    HighlightColorOption("Ámbar Pentecostés", "#30FF9800", Color(0x30FF9800))
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,7 +133,6 @@ fun LecturaScreen(
                         Text(
                             text = "$libro $capitulo",
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Serif,
                             color = GoldLight,
                             fontWeight = FontWeight.Bold
                         )
@@ -360,7 +358,7 @@ private fun VersiculoCard(
                 val longVal = hexStr.toLong(16)
                 Color(longVal)
             } catch (e: Exception) {
-                Color(0x55C9A84C)
+                Color(0x30E8C97A)
             }
         } else {
             Color.Transparent
@@ -441,7 +439,6 @@ private fun VersiculoCard(
             Text(
                 text = versiculo.texto,
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = FontFamily.Serif,
                 fontSize = baseFontSize,
                 lineHeight = baseLineHeight,
                 color = TextPrimary
@@ -464,7 +461,6 @@ private fun HighlightColorPickerDialog(
                 Text(
                     text = "Resaltar y Guardar",
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = FontFamily.Serif,
                     color = GoldLight,
                     fontWeight = FontWeight.Bold
                 )
