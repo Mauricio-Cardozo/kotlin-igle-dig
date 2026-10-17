@@ -13,7 +13,7 @@ Es el port directo de la app de referencia en **React Native / Expo** ([`bible-a
 
 - **Sagrada Biblia** — navegación en 3 niveles (Libros → Capítulos → Lectura de versículos)
   - **Dos traducciones**: *El Pueblo de Dios* y *Biblia de Navarra*, con **selector persistente** (DataStore).
-  - **Búsqueda de texto completo** (FTS4 con *fallback* a `LIKE`), tolerante a acentos.
+  - **Búsqueda de texto completo** (FTS4 `unicode61 "remove_diacritics=1"` con *fallback* a `LIKE`): ignora acentos y mayúsculas («jesus» encuentra «Jesús») y encuentra prefijos («amor» → «amores»).
   - **Favoritos y resaltados** versionados (`biblia-pueblo-<id>` / `biblia-navarra-<id>`) sobre Room.
   - **Tamaño de letra** ajustable (0.8×–1.5×) y **compartir versículo** vía `Intent`.
 - **Home / Liturgia** — Hero con saludo contextual, tiempo y **color litúrgico**, evangelio destacado, **santo del día** y **rachas** 🔥.
@@ -99,7 +99,7 @@ Tres niveles de persistencia claramente separados (MVVM + inyección de dependen
 | `catecismo_cic` | — | Catecismo de la Iglesia Católica |
 | `leccionario`, `misal_guia` | — | Apoyo |
 
-> **FTS4, no FTS5.** El SQLite del framework Android **no incluye el módulo FTS5**; usa FTS4/FTS3. La app crea un índice FTS4 (*external content*) por cada versión bíblica (`biblia_pueblo_dios_fts`, `biblia_navarra_fts`) al arrancar si no existe, y cae a `LIKE` si el índice no está disponible. La app React Native sí usa FTS5 porque `expo-sqlite` empaqueta su propio SQLite.
+> **FTS4, no FTS5.** El SQLite del framework Android **no incluye el módulo FTS5**; usa FTS4/FTS3. La app crea un índice FTS4 (*external content*) por cada versión bíblica (`biblia_pueblo_dios_fts`, `biblia_navarra_fts`) al arrancar si no existe — con el tokenizador `unicode61 "remove_diacritics=1"`, así que la búsqueda ignora acentos — y lo recrea si una instalación vieja lo tiene con otro tokenizador. Cae a `LIKE` si el índice no está disponible. La app React Native sí usa FTS5 porque `expo-sqlite` empaqueta su propio SQLite.
 
 ---
 
@@ -130,7 +130,7 @@ El wrapper de Gradle está incluido (`./gradlew`), no hace falta instalar Gradle
 ## 🧪 Tests
 
 ```bash
-# Unitarios (JVM + Robolectric) — 48 tests, 11 suites
+# Unitarios (JVM + Robolectric) — 49 tests, 11 suites
 ./gradlew testDebugUnitTest
 
 # Instrumentados (requieren dispositivo/emulador)
@@ -140,7 +140,7 @@ El wrapper de Gradle está incluido (`./gradlew`), no hace falta instalar Gradle
 ./gradlew lintDebug
 ```
 
-Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real, la versión Navarra, el Calendario y el flujo Home → Calendario → Evangelio.
+Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real (acentos, prefijos y reconstrucción del índice), la versión Navarra, el Calendario y el flujo Home → Calendario → Evangelio.
 
 ---
 
