@@ -22,10 +22,14 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # El Android SDK no siempre viene en el runner; setup-android lo instala
-      # y acepta las licencias necesarias para compilar con AGP.
+      # El runner trae el Android SDK; setup-android acepta las licencias y
+      # asegura platform-tools. No se pide el paquete `tools`: Google lo
+      # eliminó del repositorio del SDK y la acción lo instala por defecto
+      # (falla con "Failed to find package 'tools'").
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
