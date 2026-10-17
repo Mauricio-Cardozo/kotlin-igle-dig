@@ -88,7 +88,7 @@ Tres niveles de persistencia claramente separados (MVVM + inyección de dependen
 | `biblia_pueblo_dios` | 35.852 | Biblia El Pueblo de Dios |
 | `biblia_navarra` | 35.617 | Biblia de Navarra |
 | `santos` | 889 | Biografías del santoral |
-| `lecturas` | 336 | Leccionario diario (2026-01-01 → 2026-12-02) |
+| `lecturas` | 367 | Leccionario diario (2026-01-01 → 2027-01-02) |
 | `misal_propio` | 157 | Propio del Tiempo |
 | `misal_ordinario` | 202 | Ordinario de la Misa |
 | `misal_prefacios` | 67 | Prefacios |
@@ -140,7 +140,7 @@ El wrapper de Gradle está incluido (`./gradlew`), no hace falta instalar Gradle
 ./gradlew lintDebug
 ```
 
-Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real (acentos, prefijos, paginación y reconstrucción del índice), la versión Navarra, el Calendario y el flujo Home → Calendario → Evangelio.
+Los tests unitarios cubren: versiones bíblicas, búsqueda, migración de favoritos, lógica litúrgica (`seasons`), rachas, fechas y utilidades. Los instrumentados verifican en dispositivo el FTS4 real (acentos, prefijos, paginación y reconstrucción del índice), la versión Navarra, el Calendario, el flujo Home → Calendario → Evangelio, y la cobertura del leccionario (días hasta 2027-01-02, Segunda lectura separada y degradación fuera de rango).
 
 ---
 
@@ -178,6 +178,7 @@ app/src/main/java/com/example/
 app/src/test/                        # Tests unitarios (JVM + Robolectric)
 app/src/androidTest/                 # Tests instrumentados (dispositivo)
 app/src/main/assets/iglesia_digital.db
+tools/lecturas/                      # Scrapeo y completado del leccionario
 verificacion/                        # Informe de paridad RN ↔ Kotlin
 ```
 
@@ -241,6 +242,7 @@ Cada commit debe **compilar** y dejar los tests en verde. Cambios de esquema (Ro
 - **Biblia de Navarra** — © Ediciones Universidad de Navarra; texto alojado por EWTN.
 - **Catecismo de la Iglesia Católica** — © Libreria Editrice Vaticana.
 - **Misal Romano (México)** — © LiturgiaPapal.org / Conferencia del Episcopado Mexicano.
+- **Lecturas de la Misa** — textos litúrgicos según Vatican News (vaticannews.va) y el leccionario de curas.com.ar; rellenos puntuales desde dominicos.org.
 
 Desarrollado con ❤️ por [Mauricio](https://github.com/Mauricio-Cardozo).
 
