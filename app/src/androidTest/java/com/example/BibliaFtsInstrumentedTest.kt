@@ -152,4 +152,22 @@ class BibliaFtsInstrumentedTest {
             sinAcento.map { it.id }
         )
     }
+
+    @Test
+    fun search_respectsLimitAndOffset() = runBlocking {
+        dbHelper.initializeDatabase()
+
+        val primeraPagina = repository.searchVersiculos("Jesús", limit = 10)
+        assertEquals(10, primeraPagina.size)
+
+        val segundaPagina = repository.searchVersiculos("Jesús", limit = 10, offset = 10)
+        assertEquals(10, segundaPagina.size)
+        assertTrue(
+            "las páginas no deben repetir resultados",
+            primeraPagina.map { it.id }.intersect(segundaPagina.map { it.id }.toSet()).isEmpty()
+        )
+
+        // El tamaño de página por defecto sigue siendo 50.
+        assertEquals(50, repository.searchVersiculos("Jesús").size)
+    }
 }
