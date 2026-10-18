@@ -1,7 +1,6 @@
 package com.example.ui.liturgia
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavySurface
@@ -68,7 +68,7 @@ fun HeroSection(
                     strokeWidth = strokeWidth
                 )
             }
-            .clickable(onClick = onPress)
+            .pressable(pressedAlpha = 0.9f, onClick = onPress)
             .padding(20.dp)
             .testTag("hero_section")
     ) {
@@ -98,7 +98,7 @@ fun HeroSection(
                 color = TextPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 4.dp)
             )
 
             val quoteText = gospelQuote?.trim() ?: "Yo soy el camino, la verdad y la vida."
@@ -117,7 +117,7 @@ fun HeroSection(
                 Text(
                     text = gospelRef,
                     color = TextSecondary,
-                    fontSize = 13.sp,
+                    fontSize = 16.sp,
                     textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth()
                 )

@@ -88,7 +88,14 @@ class LiturgiaViewModel(
     private val dateProvider: DateProvider = DefaultDateProvider()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LiturgiaUiState())
+    private val _uiState = MutableStateFlow(
+        LiturgiaUiState(
+            // El encabezado del Home se pinta al instante (como la RN, que
+            // calcula fecha y saludo al renderizar); el resto llega async.
+            fechaLarga = fechaActualLarga(dateProvider.today()),
+            saludo = saludo(dateProvider.nowTime().hour)
+        )
+    )
     val uiState: StateFlow<LiturgiaUiState> = _uiState.asStateFlow()
 
     private val _evangelioState = MutableStateFlow(EvangelioUiState())

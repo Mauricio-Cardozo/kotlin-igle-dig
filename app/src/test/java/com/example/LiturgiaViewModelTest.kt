@@ -93,6 +93,19 @@ class LiturgiaViewModelTest {
     }
 
     @Test
+    fun viewModel_headerFieldsReadyBeforeLoad() = runTest(testDispatcher) {
+        val dateProvider = FixedDateProvider(LocalDate.of(2026, 10, 11), LocalTime.of(9, 30))
+        val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, dateProvider)
+
+        // Sin esperar la carga asíncrona: fecha y saludo ya están disponibles
+        // (el Home pinta el encabezado al instante, como la RN).
+        val initial = viewModel.uiState.value
+        assertTrue(initial.isLoading)
+        assertEquals("Domingo, 11 de Octubre", initial.fechaLarga)
+        assertEquals("Bendecido día", initial.saludo)
+    }
+
+    @Test
     fun viewModel_greetingChangesAccordingToHour() = runTest(testDispatcher) {
         val fixedDate = LocalDate.of(2026, 10, 11)
 
