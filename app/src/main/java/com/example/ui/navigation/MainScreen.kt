@@ -124,7 +124,8 @@ fun MainScreen(
     val liturgiaViewModel: LiturgiaViewModel = viewModel(
         factory = LiturgiaViewModelFactory(
             appContainer.liturgiaRepository,
-            appContainer.streaksPreferencesRepository
+            appContainer.streaksPreferencesRepository,
+            appContainer.favoritosRepository
         )
     )
 
