@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 """
-Relleno puntual de UNA fecha desde dominicos.org (fallback).
+Relleno puntual desde dominicos.org (fallback).
 
 Cuando Vatican News todavía no publicó la página de una fecha (404 dentro de su
 ventana) o su página no existe, dominicos.org publica las lecturas completas de
 las ferias con meses de anticipación. Este script arma la fila de `lecturas` con
 ese contenido (título del día, 1ª lectura, salmo, evangelio) en el formato de la
-app.
+app, y también puede completar campos vacíos de fechas ya existentes.
 
 Limitaciones de dominicos como fuente de relleno:
   · Domingos y solemnidades lejanas suelen estar «Pendiente de publicación»
     (no los cubre este script; los cubre Vatican News cuando se acerca la fecha).
-  · No publica «segunda lectura» ni las palabras del Papa.
-  · El formato del salmo es el suyo (con la referencia incluida); sirve como
-    excepción documentada, no como fuente masiva.
+  · No publica «segunda lectura», palabras del Papa ni aleluya (el aleluya solo
+    puede venir de curas.com.ar: `completar_leccionario.py`).
+  · El formato del salmo es el suyo (con la referencia y el R/. incluidos);
+    sirve como excepción documentada, no como fuente masiva.
 
 Uso:
   python3 tools/lecturas/rellenar_dominicos.py --fecha 2026-12-12 --preview
   python3 tools/lecturas/rellenar_dominicos.py --fecha 2026-12-12
+  python3 tools/lecturas/rellenar_dominicos.py --fecha 2026-12-12 --completar
+  python3 tools/lecturas/rellenar_dominicos.py --faltantes [--preview]
 
 Aviso: mismos recaudos de copyright que la Biblia. El repo se mantiene privado.
 """
@@ -27,6 +30,7 @@ import html
 import re
 import sqlite3
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import date
@@ -148,34 +152,107 @@ def parsear(texto: str) -> dict:
     }
 
 
+# Campos de `lecturas` que dominicos puede rellenar; nunca pisa valores existentes.
+CAMPOS_COMPLETABLES = (
+    "primera_lectura_ref",
+    "primera_lectura",
+    "salmo",
+    "evangelio_ref",
+    "evangelio",
+)
+
+
+def completar_vacios(conn: sqlite3.Connection, fecha: str, datos: dict, preview: bool) -> str:
+    """Rellena solo los campos vacíos de una fila existente. Devuelve un resumen."""
+    fila = conn.execute(
+        f"SELECT {', '.join(CAMPOS_COMPLETABLES)} FROM lecturas WHERE fecha = ?", (fecha,)
+    ).fetchone()
+    if fila is None:
+        return "no existe"
+    cambios = {
+        campo: datos[campo]
+        for campo, actual in zip(CAMPOS_COMPLETABLES, fila)
+        if (actual is None or not str(actual).strip()) and datos.get(campo)
+    }
+    if not cambios:
+        return "ya estaba completa"
+    if not preview:
+        asignaciones = ", ".join(f"{campo} = :{campo}" for campo in cambios)
+        conn.execute(
+            f"UPDATE lecturas SET {asignaciones} WHERE fecha = :fecha",
+            {**cambios, "fecha": fecha},
+        )
+        conn.commit()
+    return f"rellenados: {', '.join(cambios)}"
+
+
+def obtener_datos(fecha_iso: str) -> dict | None:
+    """Descarga y parsea una fecha; None si la página no trae lecturas."""
+    texto = fetch_texto(date.fromisoformat(fecha_iso))
+    if texto is None:
+        return None
+    datos = parsear(texto)
+    if not datos.get("evangelio"):
+        return None
+    return datos
+
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Rellena una fecha desde dominicos.org")
-    ap.add_argument("--fecha", required=True, type=str, help="YYYY-MM-DD")
+    ap = argparse.ArgumentParser(description="Rellena o completa fechas desde dominicos.org")
+    ap.add_argument("--fecha", type=str, help="YYYY-MM-DD")
+    ap.add_argument("--completar", action="store_true", help="Si la fecha ya existe, rellenar solo campos vacíos")
+    ap.add_argument("--faltantes", action="store_true", help="Recorrer todas las fechas de `lecturas` con salmo vacío")
     ap.add_argument("--preview", action="store_true", help="Mostrar sin guardar")
     args = ap.parse_args()
 
-    fecha = date.fromisoformat(args.fecha)
-    texto = fetch_texto(fecha)
-    if texto is None:
-        sys.exit(1)
-
-    datos = parsear(texto)
-    if not datos.get("evangelio"):
-        sys.exit(2)
-
-    if args.preview:
-        for clave, valor in datos.items():
-            recorte = (valor or "").replace("\n", " ")[:110]
-            print(f"{clave:22s}: {recorte}")
-        return
+    if not args.fecha and not args.faltantes:
+        sys.exit("Indicá --fecha o --faltantes")
 
     if not DB_PATH.exists():
         sys.exit(f"No existe la base: {DB_PATH}")
     conn = sqlite3.connect(DB_PATH)
 
-    existe = conn.execute("SELECT 1 FROM lecturas WHERE fecha = ?", (args.fecha,)).fetchone()
+    if args.faltantes:
+        fechas = [
+            fila[0]
+            for fila in conn.execute(
+                "SELECT fecha FROM lecturas WHERE salmo IS NULL OR salmo = '' ORDER BY fecha"
+            )
+        ]
+        print(f"Fechas con salmo vacío: {len(fechas)}")
+        for fecha_iso in fechas:
+            datos = obtener_datos(fecha_iso)
+            if datos is None:
+                print(f"  {fecha_iso}: sin lecturas publicadas")
+            else:
+                print(f"  {fecha_iso}: {completar_vacios(conn, fecha_iso, datos, args.preview)}")
+            time.sleep(0.3)
+        if not args.preview:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.close()
+        return
+
+    fecha_iso = args.fecha
+    datos = obtener_datos(fecha_iso)
+    if datos is None:
+        sys.exit(f"La fecha {fecha_iso} no tiene lecturas publicadas en dominicos.")
+
+    if args.preview:
+        for clave, valor in datos.items():
+            recorte = (valor or "").replace("\n", " ")[:110]
+            print(f"{clave:22s}: {recorte}")
+        existe = conn.execute("SELECT 1 FROM lecturas WHERE fecha = ?", (fecha_iso,)).fetchone()
+        print("estado: " + ("existe (usar --completar)" if existe else "no existe (se insertaría)"))
+        return
+
+    existe = conn.execute("SELECT 1 FROM lecturas WHERE fecha = ?", (fecha_iso,)).fetchone()
     if existe:
-        sys.exit(f"La fecha {args.fecha} ya existe en lecturas: no se toca.")
+        if not args.completar:
+            sys.exit(f"La fecha {fecha_iso} ya existe en lecturas: no se toca (usá --completar).")
+        print(f"Fila {fecha_iso}: {completar_vacios(conn, fecha_iso, datos, preview=False)}")
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.close()
+        return
 
     conn.execute(
         """INSERT INTO lecturas
@@ -184,15 +261,15 @@ def main() -> None:
            VALUES (:fecha, :url, :titulo_misa, :primera_lectura_ref,
                    :primera_lectura, :salmo, :evangelio_ref, :evangelio)""",
         {
-            "fecha": args.fecha,
-            "url": BASE_URL.format(fecha=args.fecha),
+            "fecha": fecha_iso,
+            "url": BASE_URL.format(fecha=fecha_iso),
             **datos,
         },
     )
     conn.commit()
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
-    print(f"Fila {args.fecha} insertada desde dominicos (1ª lectura + salmo + evangelio).")
+    print(f"Fila {fecha_iso} insertada desde dominicos (1ª lectura + salmo + evangelio).")
 
 
 if __name__ == "__main__":
