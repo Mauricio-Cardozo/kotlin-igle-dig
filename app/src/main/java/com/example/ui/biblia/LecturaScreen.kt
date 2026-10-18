@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,11 +49,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.db.VersiculoBiblia
 import com.example.data.user.Favorito
 import com.example.ui.common.ErrorState
+import com.example.ui.common.FontSizeControl
 import com.example.ui.common.LoadingState
 import com.example.ui.common.ScreenHeader
 import com.example.ui.common.pressable
 import com.example.ui.theme.ErrorColor
-import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
@@ -246,69 +245,12 @@ private fun FontSizeControlBar(
             }
             .testTag("font_size_control_bar")
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FontSizeButton(
-                label = "A−",
-                enabled = currentMultiplier > 0.85f,
-                onClick = onDecrease,
-                testTag = "font_decrease_button"
-            )
-            Box(
-                modifier = Modifier
-                    .height(24.dp)
-                    .clip(RoundedCornerShape(Radii.sm))
-                    .background(NavySurfaceElevated)
-                    .pressable(pressedAlpha = 0.7f, onClick = onReset)
-                    .padding(horizontal = 8.dp)
-                    .testTag("font_reset_button"),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${(currentMultiplier * 100).toInt()}%",
-                    color = GoldLight,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            FontSizeButton(
-                label = "A+",
-                enabled = currentMultiplier < 1.45f,
-                onClick = onIncrease,
-                testTag = "font_increase_button"
-            )
-        }
-    }
-}
-
-@Composable
-private fun FontSizeButton(
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    val shape = RoundedCornerShape(Radii.md)
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(shape)
-            .background(NavySurfaceElevated)
-            .border(1.dp, GoldSubtle, shape)
-            .pressable(pressedAlpha = 0.7f, enabled = enabled, onClick = onClick)
-            .testTag(testTag),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = if (enabled) GoldPrimary else TextSecondary.copy(alpha = 0.4f),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold
+        FontSizeControl(
+            multiplier = currentMultiplier,
+            onDecrease = onDecrease,
+            onIncrease = onIncrease,
+            onReset = onReset,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }
