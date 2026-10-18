@@ -4,48 +4,48 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.db.MisalSantosEntry
 import com.example.ui.common.EmptyState
 import com.example.ui.common.LoadingState
+import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavyBackground
-import com.example.ui.theme.NavySurface
+import com.example.ui.theme.NavySurfaceElevated
+import com.example.ui.theme.Spacing
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
 /**
- * Pantalla de detalle del Santo: biografía + Propio del santo (misal_santos).
- * Reemplaza al ComingSoonScreen (Fase 0.3).
+ * Pantalla de detalle del Santo: biografía + Propio del santo (misal_santos),
+ * en paridad visual con `app/santo/[id].tsx` de la RN: header con back circular
+ * de 36 dp y título de 20 centrado, subtítulo itálico en el cuerpo y oraciones
+ * sin tarjeta anidada.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SantoDetalleScreen(
     viewModel: LiturgiaViewModel,
@@ -59,91 +59,135 @@ fun SantoDetalleScreen(
 
     val state by viewModel.santoDetalleState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = state.santo?.nombre ?: "Santo",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = GoldLight,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (!state.santo?.titulo.isNullOrBlank()) {
-                            Text(
-                                text = state.santo?.titulo.orEmpty(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag("santo_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = GoldLight
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NavyBackground,
-                    titleContentColor = GoldLight
-                )
-            )
-        },
-        containerColor = NavyBackground,
-        modifier = modifier.testTag("screen_santo_detalle")
-    ) { innerPadding ->
-        Box(
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(NavyBackground)
+            .testTag("screen_santo_detalle")
+    ) {
+        // Header de la RN: back circular 36 con ‹ y título 20 centrado.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .fillMaxWidth()
+                .padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.sm)
         ) {
-            val santo = state.santo
-            when {
-                state.isLoading -> LoadingState(message = "Cargando la vida del santo...")
-                santo == null -> EmptyState(
-                    title = "Santo no encontrado",
-                    subtitle = "No se pudo cargar la información de este santo."
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(NavySurfaceElevated)
+                    .pressable(pressedAlpha = 0.7f, onClick = onBackClick)
+                    .testTag("santo_back_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "‹",
+                    color = GoldPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.offset(y = (-2).dp)
                 )
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("santo_lazy_column")
-                ) {
-                    if (santo.biografia.isNotBlank()) {
-                        item {
-                            Text(
-                                text = santo.biografia,
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                lineHeight = 24.sp,
-                                modifier = Modifier
-                                    .padding(bottom = 16.dp)
-                                    .testTag("santo_biografia")
-                            )
-                        }
-                    }
+            }
+            Text(
+                text = state.santo?.nombre ?: "Santo",
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(40.dp))
+        }
 
-                    if (state.misalSantos.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "ORACIONES PROPIAS",
-                                color = GoldPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
+        val santo = state.santo
+        when {
+            state.isLoading -> LoadingState(message = "Cargando la vida del santo...")
+            santo == null -> EmptyState(
+                title = "Santo no encontrado",
+                subtitle = "No se pudo cargar la información de este santo."
+            )
+            else -> LazyColumn(
+                contentPadding = PaddingValues(start = Spacing.xl, end = Spacing.xl, bottom = 60.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("santo_lazy_column")
+            ) {
+                // El subtítulo va en el cuerpo (itálico dorado), como la RN.
+                val cleanTitulo = limpiarTitulo(santo.titulo)
+                if (cleanTitulo != null) {
+                    item {
+                        Text(
+                            text = cleanTitulo,
+                            color = GoldLight,
+                            fontSize = 14.sp,
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier.padding(bottom = Spacing.lg)
+                        )
+                    }
+                }
+
+                item {
+                    if (santo.biografia.isNotBlank()) {
+                        Text(
+                            text = santo.biografia,
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            lineHeight = 24.sp,
+                            modifier = Modifier
+                                .padding(bottom = Spacing.xl)
+                                .testTag("santo_biografia")
+                        )
+                    } else {
+                        Text(
+                            text = "No hay biografía disponible para este santo.",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier
+                                .padding(bottom = Spacing.xl)
+                                .testTag("santo_biografia")
+                        )
+                    }
+                }
+
+                // Oraciones propias: una tarjeta por oración (sin card anidada).
+                val propio = state.misalSantos.firstOrNull { !it.colecta.isNullOrBlank() }
+                    ?: state.misalSantos.firstOrNull()
+                if (propio != null) {
+                    item {
+                        Text(
+                            text = "ORACIONES PROPIAS",
+                            color = GoldPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.md)
+                        )
+                    }
+                    item {
+                        Column {
+                            if (!propio.antifonaEntrada.isNullOrBlank()) {
+                                PrayerCard(label = "Antífona de entrada", text = propio.antifonaEntrada)
+                            }
+                            if (!propio.colecta.isNullOrBlank()) {
+                                PrayerCard(label = "Oración colecta", text = propio.colecta)
+                            }
+                            if (!propio.oracionOfrendas.isNullOrBlank()) {
+                                PrayerCard(label = "Oración sobre las ofrendas", text = propio.oracionOfrendas)
+                            }
+                            if (!propio.prefacio.isNullOrBlank()) {
+                                PrayerCard(label = "Prefacio", text = propio.prefacio)
+                            }
+                            if (!propio.antifonaComunion.isNullOrBlank()) {
+                                PrayerCard(label = "Antífona de comunión", text = propio.antifonaComunion)
+                            }
+                            if (!propio.postcomunion.isNullOrBlank()) {
+                                PrayerCard(label = "Postcomunión", text = propio.postcomunion)
+                            }
                         }
-                        items(state.misalSantos) { entry -> MisalSantoBlock(entry) }
                     }
                 }
             }
@@ -151,51 +195,10 @@ fun SantoDetalleScreen(
     }
 }
 
-@Composable
-private fun MisalSantoBlock(entry: MisalSantosEntry) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(NavySurface)
-            .padding(16.dp)
-            .padding(bottom = 4.dp)
-    ) {
-        if (!entry.nombre.isNullOrBlank()) {
-            Text(
-                text = entry.nombre,
-                color = GoldLight,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-        }
-        if (!entry.rango.isNullOrBlank()) {
-            Text(
-                text = entry.rango,
-                color = TextSecondary,
-                fontSize = 12.sp,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-        if (!entry.antifonaEntrada.isNullOrBlank()) {
-            PrayerCard(label = "Antífona de entrada", text = entry.antifonaEntrada)
-        }
-        if (!entry.colecta.isNullOrBlank()) {
-            PrayerCard(label = "Oración colecta", text = entry.colecta)
-        }
-        if (!entry.oracionOfrendas.isNullOrBlank()) {
-            PrayerCard(label = "Oración sobre las ofrendas", text = entry.oracionOfrendas)
-        }
-        if (!entry.prefacio.isNullOrBlank()) {
-            PrayerCard(label = "Prefacio", text = entry.prefacio)
-        }
-        if (!entry.antifonaComunion.isNullOrBlank()) {
-            PrayerCard(label = "Antífona de comunión", text = entry.antifonaComunion)
-        }
-        if (!entry.postcomunion.isNullOrBlank()) {
-            PrayerCard(label = "Postcomunión", text = entry.postcomunion)
-        }
-    }
-}
+/** Quita el rango final («Memoria», «Fiesta», «Solemnidad») del título, como la RN. */
+private fun limpiarTitulo(titulo: String?): String? =
+    titulo
+        ?.replace(Regex("[.\\s]*(Memoria|Fiesta|Solemnidad)$", RegexOption.IGNORE_CASE), "")
+        ?.replace(Regex("[.\\s]+$"), "")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
