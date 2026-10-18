@@ -106,8 +106,7 @@ fun SantoDetalleScreen(
         when {
             state.isLoading -> LoadingState(message = "Cargando la vida del santo...")
             santo == null -> EmptyState(
-                title = "Santo no encontrado",
-                subtitle = "No se pudo cargar la información de este santo."
+                message = "No se pudo cargar la información de este santo."
             )
             else -> LazyColumn(
                 contentPadding = PaddingValues(start = Spacing.xl, end = Spacing.xl, bottom = 60.dp),
