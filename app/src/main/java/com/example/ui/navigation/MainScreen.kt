@@ -59,6 +59,9 @@ import com.example.ui.liturgia.LiturgiaScreen
 import com.example.ui.liturgia.LiturgiaViewModel
 import com.example.ui.liturgia.LiturgiaViewModelFactory
 import com.example.ui.liturgia.SantoDetalleScreen
+import com.example.ui.oracion.RosarioScreen
+import com.example.ui.oracion.RosarioViewModel
+import com.example.ui.oracion.RosarioViewModelFactory
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
@@ -136,6 +139,13 @@ fun MainScreen(
         )
     )
 
+    val rosarioViewModel: RosarioViewModel = viewModel(
+        factory = RosarioViewModelFactory(
+            appContainer.streaksPreferencesRepository,
+            appContainer.userPreferencesRepository
+        )
+    )
+
     // Check which tab is active
     val isBibliaTab = currentRoute?.startsWith("biblia_") == true
     val isLiturgiaTab = currentRoute == null || currentRoute == BottomNavTab.LITURGIA.route
@@ -202,10 +212,8 @@ fun MainScreen(
                 }
 
                 composable(LiturgiaDestinations.ROSARIO_GUIA) {
-                    ComingSoonScreen(
-                        title = "Santo Rosario",
-                        icon = Icons.Default.VolunteerActivism,
-                        description = "La guía interactiva paso a paso del Santo Rosario con seguimiento de misterios y cuentas se integrará próximamente.",
+                    RosarioScreen(
+                        viewModel = rosarioViewModel,
                         onBackClick = { navController.popBackStack() }
                     )
                 }
@@ -331,7 +339,7 @@ fun MainScreen(
                     ComingSoonScreen(
                         title = "Oración",
                         icon = Icons.Default.VolunteerActivism,
-                        description = "El Santo Rosario, las novenas tradicionales y oraciones de los santos se integrarán en las próximas fases."
+                        description = "El hub de oración (Coronilla, novenas, jaculatorias y oraciones de los santos) se integrará en las próximas fases."
                     )
                 }
             }
