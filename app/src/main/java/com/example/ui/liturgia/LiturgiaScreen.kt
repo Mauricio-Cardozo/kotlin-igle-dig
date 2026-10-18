@@ -33,6 +33,7 @@ import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.NavySurface
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -248,7 +249,7 @@ fun LiturgiaContent(
                     }
                 } else if (uiState.season != null) {
                     // Si no hay propio pero sí temporada, tarjeta hacia /misal/propio
-                    val shape = RoundedCornerShape(16.dp)
+                    val shape = RoundedCornerShape(Radii.lg)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -293,7 +294,7 @@ fun LiturgiaContent(
 
 @Composable
 fun PrayerCard(label: String, text: String, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(Radii.lg)
     Column(
         modifier = modifier
             .fillMaxWidth()

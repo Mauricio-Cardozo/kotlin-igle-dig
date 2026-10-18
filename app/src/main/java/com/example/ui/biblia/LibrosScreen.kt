@@ -46,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -357,7 +356,6 @@ private fun BookItemCard(
                 Text(
                     text = libro.libro,
                     style = MaterialTheme.typography.titleLarge,
-                    fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary
                 )
@@ -495,7 +493,6 @@ private fun SearchResultItemCard(
                 Text(
                     text = versiculo.referencia,
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold,
                     color = GoldLight
                 )
@@ -509,7 +506,6 @@ private fun SearchResultItemCard(
             Text(
                 text = versiculo.texto,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = FontFamily.Serif,
                 color = TextPrimary,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,

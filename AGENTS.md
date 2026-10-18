@@ -76,7 +76,7 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 - **Compose**:
   - Los componentes de interfaz (`Screen`, `Component`) deben aplicar *State Hoisting*. Los componentes no deben recibir directamente el ViewModel a menos que sean pantallas raíz de navegación.
   - Uso de `testTag` descriptivos en elementos interactivos para pruebas automáticas.
-  - Paleta litúrgica coherente definida en `Color.kt` (`NavyBackground` `#0A1128`, `NavySurface` `#101A38`, `GoldPrimary` `#C9A84C`, `GoldLight` `#E8C97A`).
+  - Paleta litúrgica coherente definida en `Color.kt` (`NavyBackground` `#0D1B2A`, `NavySurface` `#1A2D45`, `NavySurfaceElevated` `#243B55`, `GoldPrimary` `#C9A84C`, `GoldLight` `#E8C97A`, `GoldSubtle` `#8B6914`). Tipografía del sistema (sin serifas) y escala de espaciado/radios en `Dimens.kt` (`Spacing`/`Radii`), en paridad con la RN.
 - **Navegación**:
   - Rutas dinámicas en `NavigationDestinations.kt` deben utilizar codificación URL (`android.net.Uri.encode` / `decode`) para parámetros como nombres de libros con espacios o caracteres especiales (ej. "1 Corintios", "Génesis").
 - **Terminología**:
@@ -153,6 +153,7 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 - **Favoritos versionados (`biblia-pueblo-<id>`)**: un mismo `id` numérico existe en ambas tablas bíblicas, así que la clave del favorito debe incluir la versión. Migración Room 1→2 convierte las claves antiguas `biblia-<id>` → `biblia-pueblo-<id>`.
 - **`namespace = com.example` vs `applicationId = com.iglesiadigital.app`**: el namespace del código sigue en `com.example` (plantilla de AI Studio); el `applicationId` real ya es `com.iglesiadigital.app`. Renombrar el paquete queda como tarea de Fase 1.
 - **Lecturas mantenidas con `tools/lecturas/`**: la tabla `lecturas` se regenera con herramientas propias — Vatican News (título, 1ª, 2ª, evangelio y palabras del Papa; ventana móvil de ~77 días) + curas.com.ar (salmo y aleluya del leccionario, emparejado por tiempo/semana más una tabla curada de fiestas con lecturas propias) + dominicos.org como relleno puntual de fechas que Vatican News todavía no publica. Los días sin fuente quedan con el bloque vacío (la UI lo oculta): ferias «después de Epifanía», memorias con lecturas feriales y aleluyas (la fuente solo las trae en una minoría de días). Al actualizar el asset hay que subir `CURRENT_CONTENT_VERSION` en `IglesiaDatabaseHelper.kt` para forzar la recopia en instalaciones existentes; `user_version` no se toca (pertenece al esquema heredado de la app RN).
+- **Paridad visual con la RN (pulido de UI)**: tab bar flotante en píldora con ocultado al scroll (solo en las pantallas de tabs, como la RN, donde Evangelio/Santo/Rosario/Ajustes quedan fuera del navegador), modo inmersivo (status/navigation bar ocultas, transitorias al swipe) con un tope de 12 dp aportado por `MainScreen`, tipografía sans del sistema y radios/escala en `Dimens.kt`. El orden litúrgico de las secciones del Evangelio se mantiene (la RN muestra la 2ª lectura antes del salmo; no se copia ese error).
 
 ---
 

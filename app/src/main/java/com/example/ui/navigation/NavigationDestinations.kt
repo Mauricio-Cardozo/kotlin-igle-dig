@@ -1,30 +1,25 @@
 package com.example.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Church
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.VolunteerActivism
-import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Church
-import androidx.compose.material.icons.outlined.VolunteerActivism
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Bottom navigation bar destinations.
+ * Bottom navigation bar destinations (tab bar flotante, estilo RN).
  */
 enum class BottomNavTab(
     val route: String,
     val title: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
+    val icon: ImageVector,
     val testTag: String
 ) {
-    LITURGIA("liturgia", "Liturgia", Icons.Filled.Church, Icons.Outlined.Church, "tab_liturgia"),
-    BIBLIA("biblia_root", "Biblia", Icons.Filled.AutoStories, Icons.Outlined.AutoStories, "tab_biblia"),
-    CALENDARIO("calendario", "Calendario", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "tab_calendario"),
-    ORACION("oracion", "Oración", Icons.Filled.VolunteerActivism, Icons.Outlined.VolunteerActivism, "tab_oracion");
+    LITURGIA("liturgia", "Liturgia", Icons.Filled.Home, "tab_liturgia"),
+    BIBLIA("biblia_root", "Biblia", Icons.AutoMirrored.Filled.MenuBook, "tab_biblia"),
+    CALENDARIO("calendario", "Calendario", Icons.Filled.CalendarMonth, "tab_calendario"),
+    ORACION("oracion", "Oración", Icons.Filled.VolunteerActivism, "tab_oracion");
 }
 
 /**

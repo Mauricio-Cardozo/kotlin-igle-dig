@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar">
+        <!-- Splash navy: evita el flash blanco del arranque en frío (paridad con la RN) -->
+        <item name="android:windowBackground">@color/navy_background</item>
+    </style>
 </resources>

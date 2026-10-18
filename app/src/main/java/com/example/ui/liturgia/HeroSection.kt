@@ -33,6 +33,7 @@ import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavySurface
 import com.example.ui.theme.NavySurfaceElevated
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -46,7 +47,7 @@ fun HeroSection(
     modifier: Modifier = Modifier
 ) {
     val accentColor = season?.color ?: GoldPrimary
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(Radii.lg)
 
     Box(
         modifier = modifier

@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,10 +71,10 @@ fun ComingSoonScreen(
             colors = CardDefaults.cardColors(
                 containerColor = NavySurface
             ),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .align(Alignment.Center)
-                .border(1.dp, GoldSubtle.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .border(1.dp, GoldSubtle.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(24.dp)
         ) {
             Column(
@@ -93,7 +92,6 @@ fun ComingSoonScreen(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold,
                     color = GoldLight,
                     textAlign = TextAlign.Center

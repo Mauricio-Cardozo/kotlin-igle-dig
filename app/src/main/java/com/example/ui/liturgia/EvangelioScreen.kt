@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,7 +69,6 @@ fun EvangelioScreen(
                         Text(
                             text = "Evangelio del Día",
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Serif,
                             color = GoldLight,
                             fontWeight = FontWeight.Bold
                         )
@@ -136,7 +134,6 @@ private fun EvangelioContent(lectura: Lectura) {
                 Text(
                     text = lectura.tituloMisa,
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = FontFamily.Serif,
                     color = GoldLight,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.testTag("evangelio_titulo_misa")
@@ -197,7 +194,7 @@ private fun ReadingBlock(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(NavySurface)
             .padding(16.dp)
     ) {
@@ -221,7 +218,6 @@ private fun ReadingBlock(
         Text(
             text = text,
             color = TextPrimary,
-            fontFamily = if (emphasized) FontFamily.Serif else FontFamily.Default,
             fontSize = 15.sp,
             lineHeight = 24.sp
         )

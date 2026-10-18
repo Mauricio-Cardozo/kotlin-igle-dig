@@ -320,8 +320,8 @@ private fun MisalPropioDelDia(entry: MisalSantosEntry) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, NavySeparator, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, NavySeparator, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(NavySurfaceElevated)
             .padding(16.dp)
     ) {

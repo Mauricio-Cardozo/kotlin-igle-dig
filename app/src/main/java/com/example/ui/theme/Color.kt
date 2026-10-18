@@ -16,10 +16,11 @@ val TextPrimary = Color(0xFFF0E6CC)
 val TextSecondary = Color(0xFF9BA8B5)
 val ErrorColor = Color(0xFFE07070)
 
-// 6 Highlight Colors for Bible Verses (clearly legible on navy dark background)
-val HighlightGold = Color(0x55C9A84C)     // Warm Sacred Gold
-val HighlightEmerald = Color(0x552E7D32)  // Olive / Hope Emerald
-val HighlightRuby = Color(0x55C62828)     // Passion Ruby
-val HighlightAzure = Color(0x551565C0)    // Marian Celestial Azure
-val HighlightAmethyst = Color(0x557B1FA2) // Penance / Advent Violet
-val HighlightAmber = Color(0x55E65100)    // Pentecost Amber
+// 6 Highlight Colors for Bible Verses, iguales a la app RN: se aplican con
+// alpha 0x30 (≈ 18.8 %), equivalente a `color + '30'` de la RN sobre el navy.
+val HighlightGold = Color(0x30E8C97A)     // Dorado
+val HighlightEmerald = Color(0x304CAF50)  // Verde
+val HighlightRuby = Color(0x30E07070)     // Rojo
+val HighlightAzure = Color(0x302196F3)    // Azul
+val HighlightAmethyst = Color(0x307B3FAF) // Violeta
+val HighlightAmber = Color(0x30FF9800)    // Naranja
