@@ -19,10 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -50,7 +49,13 @@ class LiturgiaViewModelTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
+        // `Main` unconfined (equivale al `Main.immediate` de producción) y sin `resetMain`
+        // entre tests: una continuación del `viewModelScope` en vuelo al terminar un test se
+        // reanudaría con el Main real de Robolectric (looper en pausa) y quedaría atascada
+        // reteniendo el lock del actor de DataStore, colgando los tests siguientes, incluso en
+        // su @Before. Con unconfined la reanudación corre inline y el drenado siempre termina.
+        // Cada `@Before` reinstala el dispatcher antes de tocar los repos.
+        Dispatchers.setMain(UnconfinedTestDispatcher(testDispatcher.scheduler))
         context = ApplicationProvider.getApplicationContext()
         val dbFile = context.getDatabasePath(IglesiaDatabaseHelper.DATABASE_NAME)
         dbFile.parentFile?.mkdirs()
@@ -65,11 +70,6 @@ class LiturgiaViewModelTest {
         liturgiaRepository = LiturgiaRepository(dbHelper)
         streaksRepository = StreaksPreferencesRepository(context)
         favoritosRepository = FavoritosRepository(FakeFavoritoDao())
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
     }
 
     private suspend fun LiturgiaViewModel.awaitLoaded(): LiturgiaUiState =
