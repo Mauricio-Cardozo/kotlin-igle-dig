@@ -1,73 +1,65 @@
 package com.example.ui.biblia
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.db.BibliaVersion
 import com.example.data.db.LibroBiblia
 import com.example.data.db.VersiculoBiblia
+import com.example.ui.common.Buscador
 import com.example.ui.common.EmptyState
 import com.example.ui.common.ErrorState
 import com.example.ui.common.LoadingState
+import com.example.ui.common.ScreenHeader
+import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
-import com.example.ui.theme.NavySeparator
-import com.example.ui.theme.NavySurface
-import com.example.ui.theme.NavySurfaceElevated
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Nivel 1 del flujo bíblico: hero con imagen, buscador, filtros y las 9
+ * secciones canónicas en grilla de 2 columnas, en paridad con la RN.
+ */
 @Composable
 fun LibrosScreen(
     viewModel: BibliaViewModel,
@@ -76,10 +68,10 @@ fun LibrosScreen(
     modifier: Modifier = Modifier
 ) {
     val librosState by viewModel.librosState.collectAsStateWithLifecycle()
-    val filtroTestamento by viewModel.filtroTestamento.collectAsStateWithLifecycle()
+    val filtro by viewModel.filtroTestamento.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val busquedaState by viewModel.busquedaState.collectAsStateWithLifecycle()
-    val bibliaVersion by viewModel.bibliaVersion.collectAsStateWithLifecycle()
+    val version by viewModel.bibliaVersion.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -87,372 +79,128 @@ fun LibrosScreen(
             .background(NavyBackground)
             .testTag("screen_libros")
     ) {
-        // Top Header
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = "Santa Biblia",
-                style = MaterialTheme.typography.headlineLarge,
-                color = GoldLight,
-                fontWeight = FontWeight.Bold
+        when (val state = librosState) {
+            is LibrosUiState.Loading -> LoadingState(message = "Cargando…")
+            is LibrosUiState.Error -> ErrorState(
+                message = state.message,
+                onRetry = viewModel::loadLibros
             )
-            Text(
-                text = bibliaVersion.label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Bible Version Selector (Pueblo de Dios / Navarra)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("biblia_version_selector")
-            ) {
-                BibliaVersion.entries.forEach { version ->
-                    FiltroChipItem(
-                        label = version.label,
-                        selected = bibliaVersion == version,
-                        onClick = { viewModel.setBibliaVersion(version) },
-                        testTag = "version_${version.key}"
+            is LibrosUiState.Success -> {
+                if (searchQuery.isNotBlank()) {
+                    BusquedaEnLaBiblia(
+                        query = searchQuery,
+                        state = busquedaState,
+                        onQueryChange = viewModel::onSearchQueryChanged,
+                        onClear = viewModel::clearSearch,
+                        onResultClick = onSearchResultClick,
+                        onLoadMore = viewModel::loadMoreResultados
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = viewModel::onSearchQueryChanged,
-                placeholder = {
-                    Text(
-                        "Buscar en toda la Biblia (ej. amor prójimo)",
-                        color = TextSecondary.copy(alpha = 0.7f),
-                        fontSize = 14.sp
+                } else {
+                    CatalogoDeLibros(
+                        libros = state.libros,
+                        filtro = filtro,
+                        version = version,
+                        query = searchQuery,
+                        onQueryChange = viewModel::onSearchQueryChanged,
+                        onClearSearch = viewModel::clearSearch,
+                        onFiltroChange = viewModel::setFiltroTestamento,
+                        onVersionChange = viewModel::setBibliaVersion,
+                        onLibroClick = onLibroClick
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar",
-                        tint = GoldPrimary
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(
-                            onClick = viewModel::clearSearch,
-                            modifier = Modifier.testTag("clear_search_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Limpiar búsqueda",
-                                tint = TextSecondary
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = NavySurface,
-                    unfocusedContainerColor = NavySurface,
-                    focusedBorderColor = GoldPrimary,
-                    unfocusedBorderColor = NavySeparator,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    cursorColor = GoldPrimary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("search_text_field")
-            )
-
-            // Testament Filter Chips (only when not searching)
-            if (searchQuery.isBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    FiltroChipItem(
-                        label = "Todos",
-                        selected = filtroTestamento == FiltroTestamento.TODOS,
-                        onClick = { viewModel.setFiltroTestamento(FiltroTestamento.TODOS) },
-                        testTag = "filter_todos"
-                    )
-                    FiltroChipItem(
-                        label = "Antiguo Testamento",
-                        selected = filtroTestamento == FiltroTestamento.ANTIGUO,
-                        onClick = { viewModel.setFiltroTestamento(FiltroTestamento.ANTIGUO) },
-                        testTag = "filter_antiguo"
-                    )
-                    FiltroChipItem(
-                        label = "Nuevo Testamento",
-                        selected = filtroTestamento == FiltroTestamento.NUEVO,
-                        onClick = { viewModel.setFiltroTestamento(FiltroTestamento.NUEVO) },
-                        testTag = "filter_nuevo"
-                    )
-                }
-            }
-        }
-
-        // Content Area: Search Results or Books List
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .weight(1f)
-        ) {
-            if (searchQuery.isNotBlank()) {
-                // Show Search Results
-                SearchResultsView(
-                    state = busquedaState,
-                    onResultClick = onSearchResultClick,
-                    onLoadMore = viewModel::loadMoreResultados
-                )
-            } else {
-                // Show Books List
-                BooksListView(
-                    state = librosState,
-                    filtro = filtroTestamento,
-                    onLibroClick = onLibroClick,
-                    onRetry = viewModel::loadLibros
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FiltroChipItem(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (selected) NavyBackground else TextPrimary,
-                fontSize = 12.sp
-            )
-        },
-        shape = RoundedCornerShape(20.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = NavySurface,
-            selectedContainerColor = GoldPrimary,
-            selectedLabelColor = NavyBackground
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = selected,
-            borderColor = if (selected) GoldPrimary else NavySeparator,
-            selectedBorderColor = GoldPrimary
-        ),
-        modifier = Modifier.testTag(testTag)
-    )
-}
-
-@Composable
-private fun BooksListView(
-    state: LibrosUiState,
-    filtro: FiltroTestamento,
-    onLibroClick: (String) -> Unit,
-    onRetry: () -> Unit
-) {
-    when (state) {
-        is LibrosUiState.Loading -> {
-            LoadingState(message = "Cargando sagradas escrituras...")
-        }
-        is LibrosUiState.Error -> {
-            ErrorState(message = state.message, onRetry = onRetry)
-        }
-        is LibrosUiState.Success -> {
-            val filteredBooks = state.libros.filter { libro ->
-                when (filtro) {
-                    FiltroTestamento.TODOS -> true
-                    FiltroTestamento.ANTIGUO -> libro.testamento.equals("Antiguo", ignoreCase = true)
-                    FiltroTestamento.NUEVO -> libro.testamento.equals("Nuevo", ignoreCase = true)
-                }
-            }
-
-            if (filteredBooks.isEmpty()) {
-                EmptyState(
-                    title = "No se encontraron libros",
-                    subtitle = "No hay libros para el filtro seleccionado"
-                )
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize().testTag("books_lazy_column")
-                ) {
-                    items(
-                        items = filteredBooks,
-                        key = { it.libro }
-                    ) { libro ->
-                        BookItemCard(
-                            libro = libro,
-                            onClick = { onLibroClick(libro.libro) }
-                        )
-                    }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun BookItemCard(
-    libro: LibroBiblia,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = NavySurface
-        ),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, GoldSubtle.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .testTag("book_item_${libro.libro}")
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(NavySurfaceElevated)
-                    .border(1.dp, GoldSubtle.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Book,
-                    contentDescription = null,
-                    tint = GoldPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = libro.libro,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "${libro.testamento} Testamento",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = GoldLight.copy(alpha = 0.8f)
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                contentDescription = null,
-                tint = GoldLight.copy(alpha = 0.5f),
-                modifier = Modifier.size(14.dp)
-            )
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// Nivel de búsqueda (pantalla dedicada como en la RN)
+// ---------------------------------------------------------------------------
 
 @Composable
-private fun SearchResultsView(
+private fun BusquedaEnLaBiblia(
+    query: String,
     state: BusquedaUiState,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
     onResultClick: (String, Int, Int) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    when (state) {
-        is BusquedaUiState.Idle -> {
-            EmptyState(
-                title = "Buscar versículos",
-                subtitle = "Escribe una palabra o frase para buscar en las Escrituras."
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScreenHeader(
+            title = "Buscar en la Biblia",
+            superLabel = "✝ IGLESIA DIGITAL",
+            showBack = true,
+            onBack = onClear
+        )
+        Buscador(
+            value = query,
+            onValueChange = onQueryChange,
+            onClear = onClear,
+            placeholder = "Buscá palabras…"
+        )
+
+        when (state) {
+            // Esperando el debounce de 300 ms antes de disparar la búsqueda.
+            is BusquedaUiState.Idle -> Spacer(modifier = Modifier.fillMaxSize())
+            is BusquedaUiState.Searching -> LoadingState(message = "Cargando…")
+            is BusquedaUiState.Error -> ErrorState(
+                message = state.message,
+                onRetry = { onQueryChange(query) }
             )
-        }
-        is BusquedaUiState.Searching -> {
-            LoadingState(message = "Buscando en la Biblia...")
-        }
-        is BusquedaUiState.Error -> {
-            ErrorState(message = state.message)
-        }
-        is BusquedaUiState.Success -> {
-            if (state.resultados.isEmpty()) {
-                EmptyState(
-                    title = "Sin resultados",
-                    subtitle = "No se encontraron versículos que coincidan con la búsqueda."
-                )
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize().testTag("search_results_lazy_column")
-                ) {
-                    item {
-                        Text(
-                            text = if (state.hayMas) {
-                                "Mostrando ${state.resultados.size} resultados"
-                            } else {
-                                "${state.resultados.size} resultados encontrados"
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = GoldLight,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                    items(
-                        items = state.resultados,
-                        key = { it.id }
-                    ) { versiculo ->
-                        SearchResultItemCard(
-                            versiculo = versiculo,
-                            onClick = { onResultClick(versiculo.libro, versiculo.capitulo, versiculo.versiculo) }
-                        )
-                    }
-                    if (state.hayMas) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.cargandoMas) {
-                                    CircularProgressIndicator(
-                                        color = GoldPrimary,
-                                        strokeWidth = 3.dp,
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .testTag("load_more_progress")
+            is BusquedaUiState.Success -> {
+                if (state.resultados.isEmpty()) {
+                    EmptyState(
+                        title = "Sin resultados",
+                        subtitle = "No se encontraron versículos que coincidan con la búsqueda."
+                    )
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("search_results_lazy_column")
+                    ) {
+                        items(state.resultados, key = { it.id }) { versiculo ->
+                            SearchResultRow(
+                                versiculo = versiculo,
+                                onClick = {
+                                    onResultClick(
+                                        versiculo.libro,
+                                        versiculo.capitulo,
+                                        versiculo.versiculo
                                     )
-                                } else {
-                                    OutlinedButton(
-                                        onClick = onLoadMore,
-                                        border = BorderStroke(1.dp, GoldPrimary),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = GoldLight
-                                        ),
-                                        modifier = Modifier.testTag("load_more_button")
-                                    ) {
-                                        Text("Ver más resultados")
+                                }
+                            )
+                        }
+                        if (state.hayMas) {
+                            item(key = "load_more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (state.cargandoMas) {
+                                        CircularProgressIndicator(
+                                            color = GoldPrimary,
+                                            strokeWidth = 3.dp,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .testTag("load_more_progress")
+                                        )
+                                    } else {
+                                        TextButton(
+                                            onClick = onLoadMore,
+                                            modifier = Modifier.testTag("load_more_button")
+                                        ) {
+                                            Text(
+                                                text = "Ver más resultados",
+                                                color = GoldLight,
+                                                fontSize = 13.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -465,52 +213,287 @@ private fun SearchResultsView(
 }
 
 @Composable
-private fun SearchResultItemCard(
-    versiculo: VersiculoBiblia,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = NavySurface
-        ),
-        shape = RoundedCornerShape(12.dp),
+private fun SearchResultRow(versiculo: VersiculoBiblia, onClick: () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, GoldSubtle.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .pressable(pressedAlpha = 0.75f, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
             .testTag("search_result_${versiculo.id}")
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .clip(RoundedCornerShape(Radii.sm))
+                .background(GoldSubtle)
+                .padding(horizontal = 10.dp, vertical = 3.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = versiculo.referencia,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = GoldLight
+            Text(
+                text = versiculo.referencia,
+                color = GoldLight,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Text(
+            text = versiculo.texto,
+            color = TextPrimary,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de libros (hero + buscador + filtros + 9 secciones)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun CatalogoDeLibros(
+    libros: List<LibroBiblia>,
+    filtro: FiltroTestamento,
+    version: BibliaVersion,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
+    onFiltroChange: (FiltroTestamento) -> Unit,
+    onVersionChange: (BibliaVersion) -> Unit,
+    onLibroClick: (String) -> Unit
+) {
+    val antiguos = libros.count { it.testamento.equals("Antiguo", ignoreCase = true) }
+    val nuevos = libros.count { it.testamento.equals("Nuevo", ignoreCase = true) }
+    val grupos = when (filtro) {
+        FiltroTestamento.TODOS -> GRUPOS_BIBLIA
+        FiltroTestamento.ANTIGUO -> GRUPOS_BIBLIA.filter { it.testamento == "Antiguo" }
+        FiltroTestamento.NUEVO -> GRUPOS_BIBLIA.filter { it.testamento == "Nuevo" }
+    }
+
+    // La RN remonta la lista al cambiar de filtro (key={filtro}); replicamos
+    // el efecto volviendo al tope.
+    val listState = rememberLazyListState()
+    LaunchedEffect(filtro) { listState.scrollToItem(0) }
+
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("books_lazy_column")
+    ) {
+        item(key = "hero") {
+            BibliaHero(
+                versionLabel = version.label,
+                totalLibros = antiguos + nuevos,
+                filtro = filtro
+            )
+        }
+        item(key = "buscador") {
+            Buscador(
+                value = query,
+                onValueChange = onQueryChange,
+                onClear = onClearSearch,
+                placeholder = "Buscá en la Biblia…"
+            )
+        }
+        item(key = "filtro_testamento") {
+            PillRow {
+                BibliaPill(
+                    label = "Antiguo ($antiguos)",
+                    active = filtro == FiltroTestamento.ANTIGUO,
+                    onClick = { onFiltroChange(FiltroTestamento.ANTIGUO) },
+                    testTag = "filter_antiguo",
+                    modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = "${versiculo.testamento} Testamento",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
+                BibliaPill(
+                    label = "Nuevo ($nuevos)",
+                    active = filtro == FiltroTestamento.NUEVO,
+                    onClick = { onFiltroChange(FiltroTestamento.NUEVO) },
+                    testTag = "filter_nuevo",
+                    modifier = Modifier.weight(1f)
+                )
+                BibliaPill(
+                    label = "Todos (${antiguos + nuevos})",
+                    active = filtro == FiltroTestamento.TODOS,
+                    onClick = { onFiltroChange(FiltroTestamento.TODOS) },
+                    testTag = "filter_todos",
+                    modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+        }
+        item(key = "deut_note") {
             Text(
-                text = versiculo.texto,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextPrimary,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp
+                text = "† deuterocanónico",
+                color = TextSecondary,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 4.dp)
             )
+        }
+        item(key = "selector_version") {
+            PillRow {
+                BibliaVersion.entries.forEach { v ->
+                    BibliaPill(
+                        label = v.label,
+                        active = version == v,
+                        onClick = { onVersionChange(v) },
+                        testTag = "version_${v.key}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        grupos.forEach { grupo ->
+            item(key = "grupo_${grupo.nombre}") {
+                GrupoCanonico(grupo = grupo, onLibroClick = onLibroClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BibliaHero(
+    versionLabel: String,
+    totalLibros: Int,
+    filtro: FiltroTestamento
+) {
+    val imageRes = if (filtro == FiltroTestamento.NUEVO) {
+        R.drawable.biblia_nuevo
+    } else {
+        R.drawable.biblia_antiguo
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+    ) {
+        Image(
+            painter = painterResource(imageRes),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xA60D1B2A))
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "✝ BIBLIA ${versionLabel.uppercase()}",
+                color = GoldPrimary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "La Sagrada Escritura",
+                color = TextPrimary,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "$totalLibros Libros",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PillRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        content = content
+    )
+}
+
+@Composable
+private fun BibliaPill(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(Radii.xxl)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(if (active) GoldPrimary else Color.Transparent)
+            .border(1.dp, if (active) GoldPrimary else GoldSubtle, shape)
+            .pressable(pressedAlpha = 0.7f, onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (active) NavyBackground else GoldPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun GrupoCanonico(grupo: GrupoBiblia, onLibroClick: (String) -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .padding(top = 16.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = grupo.nombre,
+                color = GoldPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.alignByBaseline()
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${grupo.libros.size} libros",
+                color = TextSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.alignByBaseline()
+            )
+        }
+        grupo.libros.chunked(2).forEach { fila ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                fila.forEach { ref ->
+                    LibroCard(
+                        nombre = ref.libro,
+                        onClick = { onLibroClick(ref.libro) },
+                        deuterocanonico = ref.deuterocanonico,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(6.dp)
+                    )
+                }
+                if (fila.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

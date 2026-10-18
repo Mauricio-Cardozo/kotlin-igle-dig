@@ -5,44 +5,30 @@ import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,18 +38,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.db.VersiculoBiblia
 import com.example.data.user.Favorito
-import com.example.ui.common.EmptyState
 import com.example.ui.common.ErrorState
 import com.example.ui.common.LoadingState
+import com.example.ui.common.ScreenHeader
+import com.example.ui.common.pressable
+import com.example.ui.theme.ErrorColor
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
@@ -71,26 +62,36 @@ import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.NavySeparator
 import com.example.ui.theme.NavySurface
 import com.example.ui.theme.NavySurfaceElevated
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
-// 6 Highlight color palettes (alpha 0x30, igual que la app RN)
+/**
+ * Opciones de resaltado, en el mismo orden de la RN. El favorito persiste el
+ * hex con alfa 0x30 (para el fondo del versículo) y el swatch se muestra con
+ * el tono opaco, como en el modal de referencia.
+ */
 data class HighlightColorOption(
     val name: String,
     val hex: String,
-    val color: Color
+    val color: Color,
+    val swatch: Color
 )
 
 val HighlightOptions = listOf(
-    HighlightColorOption("Dorado Sacro", "#30E8C97A", Color(0x30E8C97A)),
-    HighlightColorOption("Esmeralda Esperanza", "#304CAF50", Color(0x304CAF50)),
-    HighlightColorOption("Rubí Pasión", "#30E07070", Color(0x30E07070)),
-    HighlightColorOption("Azul Mariano", "#302196F3", Color(0x302196F3)),
-    HighlightColorOption("Púrpura Adviento", "#307B3FAF", Color(0x307B3FAF)),
-    HighlightColorOption("Ámbar Pentecostés", "#30FF9800", Color(0x30FF9800))
+    HighlightColorOption("Dorado Sacro", "#30E8C97A", Color(0x30E8C97A), Color(0xFFE8C97A)),
+    HighlightColorOption("Esmeralda Esperanza", "#304CAF50", Color(0x304CAF50), Color(0xFF4CAF50)),
+    HighlightColorOption("Púrpura Adviento", "#307B3FAF", Color(0x307B3FAF), Color(0xFF7B3FAF)),
+    HighlightColorOption("Azul Mariano", "#302196F3", Color(0x302196F3), Color(0xFF2196F3)),
+    HighlightColorOption("Rubí Pasión", "#30E07070", Color(0x30E07070), Color(0xFFE07070)),
+    HighlightColorOption("Ámbar Pentecostés", "#30FF9800", Color(0x30FF9800), Color(0xFFFF9800))
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Nivel 3 del flujo bíblico: lector de filas planas (sin tarjeta), con número
+ * inline, compartir, corazón de favorito y resaltado con alfa 0x30, en paridad
+ * con la RN. Conserva el control de tamaño de fuente propio.
+ */
 @Composable
 fun LecturaScreen(
     libro: String,
@@ -101,9 +102,7 @@ fun LecturaScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    LaunchedEffect(libro, capitulo) {
-        viewModel.loadLectura(libro, capitulo)
-    }
+    LaunchedEffect(libro, capitulo) { viewModel.loadLectura(libro, capitulo) }
 
     val state by viewModel.lecturaState.collectAsStateWithLifecycle()
     val fontMultiplier by viewModel.fontSizeMultiplier.collectAsStateWithLifecycle()
@@ -111,10 +110,9 @@ fun LecturaScreen(
 
     var showFontControls by remember { mutableStateOf(false) }
     var selectedVersiculoForHighlight by remember { mutableStateOf<VersiculoBiblia?>(null) }
-
     val listState = rememberLazyListState()
 
-    // Scroll to target verse if coming from search
+    // Scroll al versículo objetivo si se llegó desde la búsqueda.
     LaunchedEffect(state, targetVersiculo) {
         if (state is LecturaUiState.Success && targetVersiculo != null) {
             val versiculos = (state as LecturaUiState.Success).versiculos
@@ -125,145 +123,104 @@ fun LecturaScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "$libro $capitulo",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = GoldLight,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Libro de la Sagrada Escritura",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag("lectura_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver a capítulos",
-                            tint = GoldLight
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { showFontControls = !showFontControls },
-                        modifier = Modifier.testTag("toggle_font_controls_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FormatSize,
-                            contentDescription = "Ajustar tamaño de fuente",
-                            tint = if (showFontControls) GoldPrimary else GoldLight
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NavyBackground,
-                    titleContentColor = GoldLight
-                )
-            )
-        },
-        containerColor = NavyBackground,
-        modifier = modifier.testTag("screen_lectura")
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Font Size Adjustment Bar
-            if (showFontControls) {
-                FontSizeControlBar(
-                    currentMultiplier = fontMultiplier,
-                    onDecrease = viewModel::decreaseFontSize,
-                    onIncrease = viewModel::increaseFontSize,
-                    onReset = viewModel::resetFontSize
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(NavyBackground)
+            .testTag("screen_lectura")
+    ) {
+        ScreenHeader(
+            title = "$libro $capitulo",
+            superLabel = "✝ BIBLIA ${bibliaVersion.label.uppercase()}",
+            subtitle = "$libro › Cap. $capitulo",
+            showBack = true,
+            onBack = onBackClick,
+            rightSlot = {
+                // Extra propio (no está en la RN): control de tamaño de fuente.
+                FontSizeToggleButton(
+                    expanded = showFontControls,
+                    onClick = { showFontControls = !showFontControls }
                 )
             }
+        )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f)
-            ) {
-                when (val s = state) {
-                    is LecturaUiState.Loading -> {
-                        LoadingState(message = "Cargando $libro capítulo $capitulo...")
-                    }
-                    is LecturaUiState.Error -> {
-                        ErrorState(
-                            message = s.message,
-                            onRetry = { viewModel.loadLectura(libro, capitulo) }
-                        )
-                    }
-                    is LecturaUiState.Success -> {
-                        if (s.versiculos.isEmpty()) {
-                            EmptyState(
-                                title = "Sin versículos",
-                                subtitle = "No se encontraron versículos en este capítulo."
-                            )
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag("versiculos_lazy_column")
-                            ) {
-                                items(
-                                    items = s.versiculos,
-                                    key = { it.id }
-                                ) { versiculo ->
-                                    val favKey = "${bibliaVersion.favoritoPrefix}${versiculo.id}"
-                                    val favorito = s.favoritosMap[favKey]
+        if (showFontControls) {
+            FontSizeControlBar(
+                currentMultiplier = fontMultiplier,
+                onDecrease = viewModel::decreaseFontSize,
+                onIncrease = viewModel::increaseFontSize,
+                onReset = viewModel::resetFontSize
+            )
+        }
 
-                                    VersiculoCard(
-                                        versiculo = versiculo,
-                                        favorito = favorito,
-                                        fontMultiplier = fontMultiplier,
-                                        onLongPress = {
-                                            if (favorito != null) {
-                                                // Already favorite -> Remove
-                                                viewModel.toggleFavorito(versiculo, "")
-                                            } else {
-                                                // Not favorite -> Open color dialog
-                                                selectedVersiculoForHighlight = versiculo
-                                            }
-                                        },
-                                        onShare = {
-                                            shareVersiculo(context, versiculo)
-                                        }
-                                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val s = state) {
+                is LecturaUiState.Loading -> LoadingState(message = "Cargando…")
+                is LecturaUiState.Error -> ErrorState(
+                    message = s.message,
+                    onRetry = { viewModel.loadLectura(libro, capitulo) }
+                )
+                is LecturaUiState.Success -> LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("versiculos_lazy_column")
+                ) {
+                    items(items = s.versiculos, key = { it.id }) { versiculo ->
+                        val favKey = "${bibliaVersion.favoritoPrefix}${versiculo.id}"
+                        val favorito = s.favoritosMap[favKey]
+                        VersiculoRow(
+                            versiculo = versiculo,
+                            favorito = favorito,
+                            fontMultiplier = fontMultiplier,
+                            onLongPress = {
+                                if (favorito != null) {
+                                    // Ya guardado: el long press lo quita.
+                                    viewModel.toggleFavorito(versiculo, "")
+                                } else {
+                                    selectedVersiculoForHighlight = versiculo
                                 }
-                            }
-                        }
+                            },
+                            onShare = { shareVersiculo(context, versiculo) }
+                        )
                     }
                 }
             }
         }
     }
 
-    // Highlight Color Picker Dialog
-    if (selectedVersiculoForHighlight != null) {
-        val targetV = selectedVersiculoForHighlight!!
+    // Modal de resaltado (mismo flujo que la RN).
+    selectedVersiculoForHighlight?.let { target ->
         HighlightColorPickerDialog(
-            referencia = targetV.referencia,
             onDismiss = { selectedVersiculoForHighlight = null },
             onColorSelect = { hexColor ->
-                viewModel.toggleFavorito(targetV, hexColor)
+                viewModel.toggleFavorito(target, hexColor)
                 selectedVersiculoForHighlight = null
             }
+        )
+    }
+}
+
+@Composable
+private fun FontSizeToggleButton(expanded: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(Radii.md)
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(shape)
+            .background(NavySurfaceElevated)
+            .border(1.dp, if (expanded) GoldPrimary else GoldSubtle, shape)
+            .pressable(pressedAlpha = 0.7f, onClick = onClick)
+            .testTag("toggle_font_controls_button"),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Aa",
+            color = GoldPrimary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -279,72 +236,87 @@ private fun FontSizeControlBar(
         color = NavySurface,
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, NavySeparator)
+            .drawBehind {
+                val stroke = 1.dp.toPx()
+                drawLine(
+                    color = NavySeparator,
+                    start = Offset(0f, size.height - stroke / 2f),
+                    end = Offset(size.width, size.height - stroke / 2f),
+                    strokeWidth = stroke
+                )
+            }
             .testTag("font_size_control_bar")
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Tamaño: ${(currentMultiplier * 100).toInt()}%",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextPrimary
+            FontSizeButton(
+                label = "A−",
+                enabled = currentMultiplier > 0.85f,
+                onClick = onDecrease,
+                testTag = "font_decrease_button"
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Box(
+                modifier = Modifier
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(Radii.sm))
+                    .background(NavySurfaceElevated)
+                    .pressable(pressedAlpha = 0.7f, onClick = onReset)
+                    .padding(horizontal = 8.dp)
+                    .testTag("font_reset_button"),
+                contentAlignment = Alignment.Center
             ) {
-                // A- Button
-                IconButton(
-                    onClick = onDecrease,
-                    enabled = currentMultiplier > 0.85f,
-                    modifier = Modifier.testTag("font_decrease_button")
-                ) {
-                    Text(
-                        text = "A-",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (currentMultiplier > 0.85f) GoldLight else TextSecondary.copy(alpha = 0.4f)
-                    )
-                }
-
-                // Reset Button
-                IconButton(
-                    onClick = onReset,
-                    modifier = Modifier.testTag("font_reset_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.RestartAlt,
-                        contentDescription = "Restablecer tamaño de fuente",
-                        tint = GoldPrimary
-                    )
-                }
-
-                // A+ Button
-                IconButton(
-                    onClick = onIncrease,
-                    enabled = currentMultiplier < 1.45f,
-                    modifier = Modifier.testTag("font_increase_button")
-                ) {
-                    Text(
-                        text = "A+",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (currentMultiplier < 1.45f) GoldLight else TextSecondary.copy(alpha = 0.4f)
-                    )
-                }
+                Text(
+                    text = "${(currentMultiplier * 100).toInt()}%",
+                    color = GoldLight,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
+            FontSizeButton(
+                label = "A+",
+                enabled = currentMultiplier < 1.45f,
+                onClick = onIncrease,
+                testTag = "font_increase_button"
+            )
         }
+    }
+}
+
+@Composable
+private fun FontSizeButton(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val shape = RoundedCornerShape(Radii.md)
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(shape)
+            .background(NavySurfaceElevated)
+            .border(1.dp, GoldSubtle, shape)
+            .pressable(pressedAlpha = 0.7f, enabled = enabled, onClick = onClick)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (enabled) GoldPrimary else TextSecondary.copy(alpha = 0.4f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun VersiculoCard(
+private fun VersiculoRow(
     versiculo: VersiculoBiblia,
     favorito: Favorito?,
     fontMultiplier: Float,
@@ -352,166 +324,135 @@ private fun VersiculoCard(
     onShare: () -> Unit
 ) {
     val highlightColor = remember(favorito?.color) {
-        if (!favorito?.color.isNullOrBlank()) {
+        val hex = favorito?.color?.removePrefix("#")
+        if (!hex.isNullOrBlank()) {
             try {
-                val hexStr = favorito!!.color!!.removePrefix("#")
-                val longVal = hexStr.toLong(16)
-                Color(longVal)
-            } catch (e: Exception) {
+                // Los favoritos guardan el alfa 0x30 al frente ("#30RRGGBB").
+                val argb = if (hex.length == 6) "30$hex" else hex
+                Color(argb.toLong(16))
+            } catch (e: NumberFormatException) {
                 Color(0x30E8C97A)
             }
         } else {
             Color.Transparent
         }
     }
+    val heartColor = parseOpaqueHex(favorito?.color) ?: ErrorColor
 
-    val baseFontSize = 17.sp * fontMultiplier
-    val baseLineHeight = 26.sp * fontMultiplier
-
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (favorito != null) highlightColor else NavySurface
-        ),
-        shape = RoundedCornerShape(12.dp),
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = if (favorito != null) 1.5.dp else 1.dp,
-                color = if (favorito != null) GoldPrimary else GoldSubtle.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clip(RoundedCornerShape(12.dp))
+            .background(highlightColor)
             .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
                 onClick = {},
                 onLongClick = onLongPress
             )
-            .testTag("versiculo_item_${versiculo.versiculo}")
+            .testTag("versiculo_item_${versiculo.versiculo}"),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
+        Text(
+            text = "${versiculo.versiculo}",
+            color = GoldPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Verse Number in Sacred Gold
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${versiculo.versiculo}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = GoldPrimary,
-                        fontSize = (16.sp * fontMultiplier)
-                    )
-                    if (favorito != null) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Bookmark,
-                            contentDescription = "Versículo guardado",
-                            tint = GoldLight,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                // Share Button
-                IconButton(
-                    onClick = onShare,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .testTag("share_versiculo_${versiculo.versiculo}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Compartir versículo",
-                        tint = GoldLight.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Verse Text in Serif Font
-            Text(
-                text = versiculo.texto,
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = baseFontSize,
-                lineHeight = baseLineHeight,
-                color = TextPrimary
-            )
-        }
+                .widthIn(min = 28.dp)
+                .padding(top = 2.dp)
+        )
+        Text(
+            text = versiculo.texto,
+            color = TextPrimary,
+            fontSize = 15.sp * fontMultiplier,
+            lineHeight = 24.sp * fontMultiplier,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "↗",
+            color = TextSecondary,
+            fontSize = 16.sp,
+            modifier = Modifier
+                .pressable(pressedAlpha = 0.7f, onClick = onShare)
+                .padding(horizontal = 4.dp)
+                .testTag("share_versiculo_${versiculo.versiculo}")
+        )
+        Text(
+            text = if (favorito != null) "♥" else "",
+            color = heartColor,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .width(20.dp)
+                .padding(top = 2.dp)
+        )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HighlightColorPickerDialog(
-    referencia: String,
     onDismiss: () -> Unit,
     onColorSelect: (String) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = NavySurfaceElevated,
+        shape = RoundedCornerShape(Radii.xl),
         title = {
-            Column {
-                Text(
-                    text = "Resaltar y Guardar",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = GoldLight,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = referencia,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-            }
+            Text(
+                text = "Resaltar versículo",
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Elige un tono para resaltar este versículo en tu Biblia:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HighlightOptions.forEach { opt ->
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(opt.swatch, CircleShape)
+                            .pressable(pressedAlpha = 0.7f, onClick = { onColorSelect(opt.hex) })
+                            .testTag("highlight_color_${opt.name.lowercase().replace(" ", "_")}")
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .pressable(pressedAlpha = 0.7f, onClick = onDismiss)
+                        .testTag("highlight_dialog_cancel"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    HighlightOptions.forEach { opt ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(2.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(opt.color)
-                                    .border(2.dp, GoldLight, CircleShape)
-                                    .clickable { onColorSelect(opt.hex) }
-                                    .testTag("highlight_color_${opt.name.lowercase().replace(" ", "_")}")
-                            )
-                        }
-                    }
+                    Text(
+                        text = "✕",
+                        color = TextSecondary,
+                        fontSize = 18.sp
+                    )
                 }
             }
         },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag("highlight_dialog_cancel")
-            ) {
-                Text("Cancelar", color = TextSecondary)
-            }
-        }
+        confirmButton = {}
     )
+}
+
+/** Toma el color opaco (sin el alfa 0x30) del hex guardado en el favorito. */
+private fun parseOpaqueHex(colorHex: String?): Color? {
+    val cleaned = colorHex?.removePrefix("#")?.takeLast(6) ?: return null
+    if (cleaned.length != 6) return null
+    return try {
+        Color(0xFF000000L or cleaned.toLong(16))
+    } catch (e: NumberFormatException) {
+        null
+    }
 }
 
 private fun shareVersiculo(context: Context, versiculo: VersiculoBiblia) {
