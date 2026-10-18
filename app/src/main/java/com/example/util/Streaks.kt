@@ -41,3 +41,32 @@ fun calcularRacha(
     val count = countRaw?.trim()?.toIntOrNull() ?: 1
     return count
 }
+
+/**
+ * Calcula la racha (días seguidos) al completar una oración hoy, con la misma regla que la
+ * app RN:
+ * - Sin fecha previa (o fecha inválida) -> 1
+ * - Ya rezada hoy (diff == 0) -> conserva el conteo actual (mínimo 1)
+ * - Rezada ayer (diff == 1) -> conteo actual + 1
+ * - Cualquier otro caso (hueco de más de un día, fecha futura) -> 1
+ */
+fun calcularNuevaRacha(
+    ultimaFechaIso: String?,
+    countRaw: String?,
+    hoy: LocalDate
+): Int {
+    if (ultimaFechaIso.isNullOrBlank()) return 1
+
+    val ultimaFecha = try {
+        LocalDate.parse(ultimaFechaIso.trim())
+    } catch (_: Exception) {
+        return 1
+    }
+
+    val count = countRaw?.trim()?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+    return when (ChronoUnit.DAYS.between(ultimaFecha, hoy)) {
+        0L -> count
+        1L -> count + 1
+        else -> 1
+    }
+}
