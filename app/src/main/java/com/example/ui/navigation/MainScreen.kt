@@ -177,7 +177,6 @@ fun MainScreen(
                         onNavigateToRosario = { navController.navigate(LiturgiaDestinations.ROSARIO_GUIA) },
                         onNavigateToCoronilla = { navController.navigate(LiturgiaDestinations.ROSARIO_CORONILLA) },
                         onNavigateToSanto = { id -> navController.navigate(LiturgiaDestinations.santoDetalleRoute(id)) },
-                        onNavigateToMisalPropio = { navController.navigate(LiturgiaDestinations.MISAL_PROPIO) },
                         onNavigateToAjustes = { navController.navigate(LiturgiaDestinations.AJUSTES) }
                     )
                 }
