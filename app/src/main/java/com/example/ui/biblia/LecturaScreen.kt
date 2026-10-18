@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -232,10 +231,10 @@ private fun FontSizeControlBar(
     onIncrease: () -> Unit,
     onReset: () -> Unit
 ) {
-    Surface(
-        color = NavySurface,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .background(NavySurface)
             .drawBehind {
                 val stroke = 1.dp.toPx()
                 drawLine(

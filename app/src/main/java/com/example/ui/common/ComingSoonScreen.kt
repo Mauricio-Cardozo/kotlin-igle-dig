@@ -7,22 +7,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -34,9 +29,18 @@ import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.NavySurface
+import com.example.ui.theme.NavySurfaceElevated
+import com.example.ui.theme.Radii
+import com.example.ui.theme.Spacing
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
+/**
+ * Placeholder de las fases pendientes (Oración, Rosario, Coronilla, Misal y
+ * Ajustes) con el estilo del shell pulido: back circular como `ScreenHeader`,
+ * tarjeta plana a la escala del tema y press feedback por opacidad en vez de
+ * los componentes M3 con ripple.
+ */
 @Composable
 fun ComingSoonScreen(
     title: String,
@@ -49,70 +53,70 @@ fun ComingSoonScreen(
         modifier = modifier
             .fillMaxSize()
             .background(NavyBackground)
-            .padding(24.dp)
+            .padding(Spacing.xxl)
             .testTag("coming_soon_${title.lowercase().replace(" ", "_")}")
     ) {
         if (onBackClick != null) {
-            IconButton(
-                onClick = onBackClick,
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .testTag("btn_back")
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(NavySurfaceElevated)
+                    .border(1.dp, GoldSubtle, CircleShape)
+                    .pressable(pressedAlpha = 0.7f, onClick = onBackClick)
+                    .testTag("btn_back"),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = GoldLight
+                Text(
+                    text = "←",
+                    color = GoldPrimary,
+                    fontSize = 20.sp,
+                    lineHeight = 22.sp
                 )
             }
         }
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = NavySurface
-            ),
-            shape = RoundedCornerShape(12.dp),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .align(Alignment.Center)
-                .border(1.dp, GoldSubtle.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                .padding(24.dp)
+                .clip(RoundedCornerShape(Radii.lg))
+                .background(NavySurface)
+                .padding(Spacing.xxl)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = GoldLight,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = GoldLight,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Próximamente",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = GoldPrimary,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = GoldLight,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                text = "Próximamente",
+                color = GoldPrimary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(
+                text = description,
+                color = TextSecondary,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
