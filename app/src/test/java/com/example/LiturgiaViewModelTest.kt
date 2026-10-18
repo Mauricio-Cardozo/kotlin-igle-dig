@@ -114,7 +114,7 @@ class LiturgiaViewModelTest {
 
     @Test
     fun viewModel_handlesDateWithoutReadingsGracefully() = runTest(testDispatcher) {
-        val fixedDate = LocalDate.of(2025, 12, 31) // outside DB range (2026-01-01..2026-12-02)
+        val fixedDate = LocalDate.of(2025, 12, 31) // outside DB range (2026-01-01..2027-01-02)
         val vm = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate))
         val state = vm.awaitLoaded()
 
