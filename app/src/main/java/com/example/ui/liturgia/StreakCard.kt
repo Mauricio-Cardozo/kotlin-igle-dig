@@ -1,7 +1,6 @@
 package com.example.ui.liturgia
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.common.pressable
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavySurface
 import com.example.ui.theme.Radii
@@ -33,7 +33,7 @@ fun StreakCard(
         modifier = modifier
             .clip(shape)
             .background(NavySurface)
-            .clickable(onClick = onPress)
+            .pressable(pressedAlpha = 0.7f, onClick = onPress)
             .padding(18.dp)
             .testTag("streak_card_${label.lowercase()}")
     ) {

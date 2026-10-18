@@ -1,7 +1,6 @@
 package com.example.ui.liturgia
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.NavySurface
@@ -41,13 +41,13 @@ fun SantoCard(
             .fillMaxWidth()
             .clip(shape)
             .background(NavySurface)
-            .clickable(onClick = onPress)
+            .pressable(pressedAlpha = 0.7f, onClick = onPress)
             .padding(20.dp)
             .testTag("santo_card")
     ) {
         Text(
             text = "✝",
-            color = GoldLight,
+            color = TextPrimary,
             fontSize = 28.sp,
             modifier = Modifier.padding(end = 14.dp)
         )
