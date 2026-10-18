@@ -3,14 +3,21 @@ package com.example
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.db.IglesiaDatabaseHelper
+import com.example.data.repository.FavoritosRepository
 import com.example.data.repository.LiturgiaRepository
+import com.example.data.user.Favorito
+import com.example.data.user.FavoritoDao
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.ui.liturgia.LiturgiaUiState
 import com.example.ui.liturgia.LiturgiaViewModel
 import com.example.util.FixedDateProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -39,6 +46,7 @@ class LiturgiaViewModelTest {
     private lateinit var dbHelper: IglesiaDatabaseHelper
     private lateinit var liturgiaRepository: LiturgiaRepository
     private lateinit var streaksRepository: StreaksPreferencesRepository
+    private lateinit var favoritosRepository: FavoritosRepository
 
     @Before
     fun setup() {
@@ -56,6 +64,7 @@ class LiturgiaViewModelTest {
         dbHelper = IglesiaDatabaseHelper(context)
         liturgiaRepository = LiturgiaRepository(dbHelper)
         streaksRepository = StreaksPreferencesRepository(context)
+        favoritosRepository = FavoritosRepository(FakeFavoritoDao())
     }
 
     @After
@@ -72,7 +81,7 @@ class LiturgiaViewModelTest {
         val fixedTime = LocalTime.of(9, 30) // 9 AM -> "Bendecido día"
         val dateProvider = FixedDateProvider(fixedDate, fixedTime)
 
-        val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, dateProvider)
+        val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, dateProvider)
         val state = viewModel.awaitLoaded()
         assertEquals("Domingo, 11 de Octubre", state.fechaLarga)
         assertEquals("Bendecido día", state.saludo)
@@ -95,7 +104,7 @@ class LiturgiaViewModelTest {
     @Test
     fun viewModel_headerFieldsReadyBeforeLoad() = runTest(testDispatcher) {
         val dateProvider = FixedDateProvider(LocalDate.of(2026, 10, 11), LocalTime.of(9, 30))
-        val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, dateProvider)
+        val viewModel = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, dateProvider)
 
         // Sin esperar la carga asíncrona: fecha y saludo ya están disponibles
         // (el Home pinta el encabezado al instante, como la RN).
@@ -110,17 +119,17 @@ class LiturgiaViewModelTest {
         val fixedDate = LocalDate.of(2026, 10, 11)
 
         // 3 AM -> "Bendecida noche"
-        val vmNight = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(3, 0)))
+        val vmNight = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, FixedDateProvider(fixedDate, LocalTime.of(3, 0)))
         vmNight.awaitLoaded()
         assertEquals("Bendecida noche", vmNight.uiState.value.saludo)
 
         // 14:00 (2 PM) -> "Bendecida tarde"
-        val vmAfternoon = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(14, 0)))
+        val vmAfternoon = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, FixedDateProvider(fixedDate, LocalTime.of(14, 0)))
         vmAfternoon.awaitLoaded()
         assertEquals("Bendecida tarde", vmAfternoon.uiState.value.saludo)
 
         // 22:00 (10 PM) -> "Bendecida noche"
-        val vmLate = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate, LocalTime.of(22, 0)))
+        val vmLate = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, FixedDateProvider(fixedDate, LocalTime.of(22, 0)))
         vmLate.awaitLoaded()
         assertEquals("Bendecida noche", vmLate.uiState.value.saludo)
     }
@@ -128,7 +137,7 @@ class LiturgiaViewModelTest {
     @Test
     fun viewModel_handlesDateWithoutReadingsGracefully() = runTest(testDispatcher) {
         val fixedDate = LocalDate.of(2025, 12, 31) // outside DB range (2026-01-01..2027-01-02)
-        val vm = LiturgiaViewModel(liturgiaRepository, streaksRepository, FixedDateProvider(fixedDate))
+        val vm = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, FixedDateProvider(fixedDate))
         val state = vm.awaitLoaded()
 
         assertNull(state.misaTitle)
@@ -136,5 +145,62 @@ class LiturgiaViewModelTest {
         assertNull(state.gospelRef)
         assertNull(state.seasonInfo)
         assertNull(state.propio)
+    }
+
+    @Test
+    fun viewModel_toggleEvangelioFavorito_guardaYQuita() = runTest(testDispatcher) {
+        val fixedDate = LocalDate.of(2026, 10, 11)
+        val vm = LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, FixedDateProvider(fixedDate))
+
+        // Carga el día con lectura (la fecha existe en el asset) y parte sin favorito.
+        vm.loadEvangelio("2026-10-11")
+        val cargado = vm.evangelioState.first { !it.isLoading && it.lectura != null }
+        assertNull(cargado.favorito)
+
+        // Primer toque: guarda el favorito con la clave y metadatos de la RN.
+        vm.toggleEvangelioFavorito()
+        val guardado = vm.evangelioState.first { it.favorito != null }
+        assertEquals("evangelio-2026-10-11", guardado.favorito?.id)
+        assertEquals("evangelio", guardado.favorito?.tipo)
+        assertEquals("Evangelio 2026-10-11", guardado.favorito?.referencia)
+        assertTrue(guardado.favorito?.preview?.isNotEmpty() == true)
+        assertNull(guardado.favorito?.color)
+        assertNotNull(favoritosRepository.getFavorito("evangelio-2026-10-11"))
+
+        // Segundo toque: lo quita.
+        vm.toggleEvangelioFavorito()
+        vm.evangelioState.first { it.favorito == null }
+        assertNull(favoritosRepository.getFavorito("evangelio-2026-10-11"))
+    }
+}
+
+/** DAO en memoria para probar el toggle del favorito sin Room. */
+private class FakeFavoritoDao : FavoritoDao {
+    private val favoritos = MutableStateFlow<List<Favorito>>(emptyList())
+
+    override fun getAllFavoritos(): Flow<List<Favorito>> = favoritos
+
+    override fun getFavoritosByTipo(tipo: String): Flow<List<Favorito>> =
+        favoritos.map { list -> list.filter { it.tipo == tipo } }
+
+    override fun getFavoritoByIdFlow(id: String): Flow<Favorito?> =
+        favoritos.map { list -> list.find { it.id == id } }
+
+    override suspend fun getFavoritoById(id: String): Favorito? =
+        favoritos.value.find { it.id == id }
+
+    override fun getFavoritosByIds(ids: List<String>): Flow<List<Favorito>> =
+        favoritos.map { list -> list.filter { it.id in ids } }
+
+    override suspend fun insertFavorito(favorito: Favorito) {
+        favoritos.update { list -> list.filterNot { it.id == favorito.id } + favorito }
+    }
+
+    override suspend fun deleteFavorito(favorito: Favorito) {
+        favoritos.update { list -> list.filterNot { it.id == favorito.id } }
+    }
+
+    override suspend fun deleteFavoritoById(id: String) {
+        favoritos.update { list -> list.filterNot { it.id == id } }
     }
 }

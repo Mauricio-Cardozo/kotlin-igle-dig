@@ -3,6 +3,7 @@ package com.example
 import android.content.Context
 import com.example.data.db.IglesiaDatabaseHelper
 import com.example.data.repository.BibliaRepository
+import com.example.data.repository.FavoritosRepository
 import com.example.data.repository.LiturgiaRepository
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.data.user.UserDatabase
@@ -16,6 +17,7 @@ interface AppContainer {
     val userDatabase: UserDatabase
     val bibliaRepository: BibliaRepository
     val liturgiaRepository: LiturgiaRepository
+    val favoritosRepository: FavoritosRepository
     val streaksPreferencesRepository: StreaksPreferencesRepository
     val userPreferencesRepository: UserPreferencesRepository
 }
@@ -35,6 +37,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val liturgiaRepository: LiturgiaRepository by lazy {
         LiturgiaRepository(iglesiaDatabaseHelper)
+    }
+
+    override val favoritosRepository: FavoritosRepository by lazy {
+        FavoritosRepository(userDatabase.favoritoDao())
     }
 
     override val streaksPreferencesRepository: StreaksPreferencesRepository by lazy {

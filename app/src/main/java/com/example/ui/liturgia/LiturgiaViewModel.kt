@@ -9,7 +9,9 @@ import com.example.data.db.DiaLectura
 import com.example.data.db.MisalPropioEntry
 import com.example.data.db.MisalSantosEntry
 import com.example.data.db.Santo
+import com.example.data.repository.FavoritosRepository
 import com.example.data.repository.LiturgiaRepository
+import com.example.data.user.Favorito
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.ui.theme.GoldPrimary
 import com.example.util.DateProvider
@@ -61,7 +63,9 @@ data class EvangelioUiState(
     val isLoading: Boolean = true,
     val fecha: String = "",
     val lectura: Lectura? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** Favorito guardado del día (clave `evangelio-<fecha>`), si existe. */
+    val favorito: Favorito? = null
 )
 
 /** Estado de la pantalla "Santo del Día" (detalle). */
@@ -85,6 +89,7 @@ data class CalendarioUiState(
 class LiturgiaViewModel(
     private val liturgiaRepository: LiturgiaRepository,
     private val streaksRepository: StreaksPreferencesRepository,
+    private val favoritosRepository: FavoritosRepository,
     private val dateProvider: DateProvider = DefaultDateProvider()
 ) : ViewModel() {
 
@@ -203,15 +208,38 @@ class LiturgiaViewModel(
     fun loadEvangelio(fecha: String? = null) {
         viewModelScope.launch {
             val target = fecha ?: hoy(dateProvider.today())
-            _evangelioState.update { it.copy(isLoading = true, fecha = target, errorMessage = null) }
+            _evangelioState.update {
+                it.copy(isLoading = true, fecha = target, errorMessage = null, favorito = null)
+            }
             try {
                 val lectura = liturgiaRepository.getLecturaDelDia(target)
-                _evangelioState.update { it.copy(isLoading = false, lectura = lectura) }
+                val favorito = lectura?.let {
+                    favoritosRepository.getFavorito(evangelioFavoritoId(it.fecha))
+                }
+                _evangelioState.update { it.copy(isLoading = false, lectura = lectura, favorito = favorito) }
             } catch (e: Exception) {
                 _evangelioState.update {
                     it.copy(isLoading = false, errorMessage = e.message ?: "Error al cargar el Evangelio")
                 }
             }
+        }
+    }
+
+    /**
+     * Alterna el favorito del Evangelio del día (corazón del header), con la
+     * misma clave y metadatos que la RN: `evangelio-<fecha>`.
+     */
+    fun toggleEvangelioFavorito() {
+        val lectura = _evangelioState.value.lectura ?: return
+        viewModelScope.launch {
+            val favorito = Favorito(
+                id = evangelioFavoritoId(lectura.fecha),
+                tipo = "evangelio",
+                referencia = "Evangelio ${lectura.fecha}",
+                preview = lectura.evangelio.orEmpty().take(80)
+            )
+            val guardado = favoritosRepository.toggleFavorito(favorito)
+            _evangelioState.update { it.copy(favorito = if (guardado) favorito else null) }
         }
     }
 
@@ -291,13 +319,17 @@ class LiturgiaViewModel(
 class LiturgiaViewModelFactory(
     private val liturgiaRepository: LiturgiaRepository,
     private val streaksRepository: StreaksPreferencesRepository,
+    private val favoritosRepository: FavoritosRepository,
     private val dateProvider: DateProvider = DefaultDateProvider()
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LiturgiaViewModel::class.java)) {
-            return LiturgiaViewModel(liturgiaRepository, streaksRepository, dateProvider) as T
+            return LiturgiaViewModel(liturgiaRepository, streaksRepository, favoritosRepository, dateProvider) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class ${modelClass.name}")
     }
 }
+
+/** Clave de favorito del Evangelio, igual que la RN: `evangelio-<fecha>`. */
+private fun evangelioFavoritoId(fecha: String): String = "evangelio-$fecha"
