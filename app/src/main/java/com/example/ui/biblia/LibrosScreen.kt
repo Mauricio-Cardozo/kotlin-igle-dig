@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +52,7 @@ import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.Radii
+import com.example.ui.theme.Spacing
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -150,10 +150,7 @@ private fun BusquedaEnLaBiblia(
             )
             is BusquedaUiState.Success -> {
                 if (state.resultados.isEmpty()) {
-                    EmptyState(
-                        title = "Sin resultados",
-                        subtitle = "No se encontraron versículos que coincidan con la búsqueda."
-                    )
+                    EmptyState(message = "Sin resultados.")
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(12.dp),
@@ -191,16 +188,15 @@ private fun BusquedaEnLaBiblia(
                                                 .testTag("load_more_progress")
                                         )
                                     } else {
-                                        TextButton(
-                                            onClick = onLoadMore,
-                                            modifier = Modifier.testTag("load_more_button")
-                                        ) {
-                                            Text(
-                                                text = "Ver más resultados",
-                                                color = GoldLight,
-                                                fontSize = 13.sp
-                                            )
-                                        }
+                                        Text(
+                                            text = "Ver más resultados",
+                                            color = GoldLight,
+                                            fontSize = 13.sp,
+                                            modifier = Modifier
+                                                .pressable(pressedAlpha = 0.7f, onClick = onLoadMore)
+                                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                                                .testTag("load_more_button")
+                                        )
                                     }
                                 }
                             }
