@@ -1,7 +1,10 @@
 package com.example.ui.oracion
 
+import com.example.util.esAdviento
+import com.example.util.esCuaresma
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.Month
 
 /**
  * Un paso del rezo del Santo Rosario. Espeja el `Step` de `data/prayers.ts` de la app RN.
@@ -361,15 +364,26 @@ private object RosarioTextos {
 }
 
 /**
- * Misterios que toca rezar según el día de la semana, con la misma asignación que la RN:
- * lunes y sábado Gozosos; martes y viernes Dolorosos; domingo y miércoles Gloriosos;
- * jueves Luminosos.
+ * Misterios que toca rezar según la fecha. La asignación semanal es la de la RN
+ * (lunes y sábado Gozosos; martes y viernes Dolorosos; domingo y miércoles Gloriosos;
+ * jueves Luminosos), con las excepciones del tiempo litúrgico tomadas de Rosarium:
+ * el 25 de diciembre y los domingos de Adviento se rezan Gozosos, y los domingos de
+ * Cuaresma (hasta el Domingo de Ramos) se rezan Dolorosos.
  */
-fun misteriosDelDia(dia: DayOfWeek): MisteriosDelDia = when (dia) {
-    DayOfWeek.MONDAY, DayOfWeek.SATURDAY -> MisteriosDelDia("Gozosos", MISTERIOS_GOZOSOS)
-    DayOfWeek.TUESDAY, DayOfWeek.FRIDAY -> MisteriosDelDia("Dolorosos", MISTERIOS_DOLOROSOS)
-    DayOfWeek.SUNDAY, DayOfWeek.WEDNESDAY -> MisteriosDelDia("Gloriosos", MISTERIOS_GLORIOSOS)
-    DayOfWeek.THURSDAY -> MisteriosDelDia("Luminosos", MISTERIOS_LUMINOSOS)
+fun misteriosDelDia(fecha: LocalDate): MisteriosDelDia {
+    val esNavidad = fecha.month == Month.DECEMBER && fecha.dayOfMonth == 25
+    if (esNavidad || (fecha.dayOfWeek == DayOfWeek.SUNDAY && esAdviento(fecha))) {
+        return MisteriosDelDia("Gozosos", MISTERIOS_GOZOSOS)
+    }
+    if (fecha.dayOfWeek == DayOfWeek.SUNDAY && esCuaresma(fecha)) {
+        return MisteriosDelDia("Dolorosos", MISTERIOS_DOLOROSOS)
+    }
+    return when (fecha.dayOfWeek) {
+        DayOfWeek.MONDAY, DayOfWeek.SATURDAY -> MisteriosDelDia("Gozosos", MISTERIOS_GOZOSOS)
+        DayOfWeek.TUESDAY, DayOfWeek.FRIDAY -> MisteriosDelDia("Dolorosos", MISTERIOS_DOLOROSOS)
+        DayOfWeek.SUNDAY, DayOfWeek.WEDNESDAY -> MisteriosDelDia("Gloriosos", MISTERIOS_GLORIOSOS)
+        DayOfWeek.THURSDAY -> MisteriosDelDia("Luminosos", MISTERIOS_LUMINOSOS)
+    }
 }
 
 /** Ordinales de los misterios; la RN titula "2er", "3er"... y aquí se usa la forma correcta. */
@@ -382,7 +396,7 @@ private val ORDINALES_MISTERIO = listOf("1.º", "2.º", "3.º", "4.º", "5.º")
  * más el paso final de rezo completado.
  */
 fun generarPasosRosario(fecha: LocalDate): List<RosarioStep> {
-    val (nombre, misterios) = misteriosDelDia(fecha.dayOfWeek)
+    val (nombre, misterios) = misteriosDelDia(fecha)
     val pasos = mutableListOf<RosarioStep>()
 
     pasos += RosarioStep("senal", "Señal de la Cruz", RosarioTextos.SENAL)
