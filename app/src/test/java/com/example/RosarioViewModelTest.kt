@@ -108,26 +108,40 @@ class RosarioViewModelTest {
         assertEquals("La Oración de Jesús en el huerto", estado.pasos[7].text)
 
         // El índice guardado correspondía a la lista anterior: se descarta sin tocar la racha.
-        esperarSinProgreso()
+        // La preferencia se escribe después del borrado, así que esperarla garantiza ambos.
+        assertEquals(
+            MisterioRosario.DOLOROSOS.valor,
+            userPreferencesRepository.rosarioMisterioManual
+                .first { it == MisterioRosario.DOLOROSOS.valor }
+        )
         val progreso = streaksRepository.getRosarioProgreso()
         assertNull(progreso.fechaIso)
         assertNull(progreso.paso)
     }
 
     @Test
-    fun viewModel_manualMystery_persistsForTheNextSession() = runTest(testDispatcher) {
-        val primera = crearViewModel()
-        primera.awaitLoaded()
+    fun viewModel_manualMystery_persistsThePreference() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        viewModel.siguiente()
+        esperarProgreso(1)
 
-        primera.setMisterioManual(MisterioRosario.LUMINOSOS)
+        viewModel.setMisterioManual(MisterioRosario.LUMINOSOS)
+
         assertEquals(
             MisterioRosario.LUMINOSOS.valor,
             userPreferencesRepository.rosarioMisterioManual
                 .first { it == MisterioRosario.LUMINOSOS.valor }
         )
+        assertNull(streaksRepository.getRosarioProgreso().paso)
+    }
 
-        val segunda = crearViewModel()
-        val estado = segunda.awaitLoaded()
+    @Test
+    fun viewModel_manualMystery_isRestoredFromTheSavedPreference() = runTest(testDispatcher) {
+        userPreferencesRepository.setRosarioMisterioManual(MisterioRosario.LUMINOSOS.valor)
+
+        val viewModel = crearViewModel()
+        val estado = viewModel.awaitLoaded()
 
         assertEquals(MisterioRosario.LUMINOSOS, estado.misterioManual)
         assertEquals("1.º Misterio Luminosos", estado.pasos[7].title)
@@ -145,6 +159,8 @@ class RosarioViewModelTest {
         viewModel.setMisterioManual(MisterioRosario.GLORIOSOS)
         assertEquals(0, viewModel.uiState.value.pasoIndex)
         assertTrue(viewModel.uiState.value.completado)
+        userPreferencesRepository.rosarioMisterioManual
+            .first { it == MisterioRosario.GLORIOSOS.valor }
 
         repeat(100) { viewModel.siguiente() }
         viewModel.marcarCompletado()
@@ -320,15 +336,6 @@ class RosarioViewModelTest {
         withContext(Dispatchers.IO) {
             withTimeout(5_000) {
                 while (streaksRepository.getRosarioProgreso().paso != paso) delay(1)
-            }
-        }
-    }
-
-    /** Espera (en tiempo real) a que el progreso guardado quede vacío. */
-    private suspend fun esperarSinProgreso() {
-        withContext(Dispatchers.IO) {
-            withTimeout(5_000) {
-                while (streaksRepository.getRosarioProgreso().paso != null) delay(1)
             }
         }
     }

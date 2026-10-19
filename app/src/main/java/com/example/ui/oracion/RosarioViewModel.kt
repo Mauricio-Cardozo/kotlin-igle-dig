@@ -115,8 +115,10 @@ class RosarioViewModel(
             )
         }
         viewModelScope.launch {
-            userPreferencesRepository.setRosarioMisterioManual(misterio.valor)
+            // El borrado va primero: quien espere la preferencia nueva (tests incluidos)
+            // tiene la garantía de que el progreso del día ya quedó descartado.
             streaksRepository.limpiarRosarioProgreso()
+            userPreferencesRepository.setRosarioMisterioManual(misterio.valor)
         }
     }
 
