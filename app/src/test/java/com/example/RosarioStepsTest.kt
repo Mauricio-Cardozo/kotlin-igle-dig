@@ -7,7 +7,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.DayOfWeek
 import java.time.LocalDate
 
 class RosarioStepsTest {
@@ -19,23 +18,47 @@ class RosarioStepsTest {
     private fun String.veces(aguja: String): Int = split(aguja).size - 1
 
     @Test
-    fun misteriosDelDia_matchesTheRnWeekdayAssignment() {
+    fun misteriosDelDia_matchesTheRnWeekdayAssignmentInOrdinaryTime() {
+        // Semana del 12 al 18 de octubre de 2026: tiempo ordinario, sin excepciones litúrgicas.
         val esperado = mapOf(
-            DayOfWeek.MONDAY to "Gozosos",
-            DayOfWeek.TUESDAY to "Dolorosos",
-            DayOfWeek.WEDNESDAY to "Gloriosos",
-            DayOfWeek.THURSDAY to "Luminosos",
-            DayOfWeek.FRIDAY to "Dolorosos",
-            DayOfWeek.SATURDAY to "Gozosos",
-            DayOfWeek.SUNDAY to "Gloriosos"
+            LocalDate.of(2026, 10, 12) to "Gozosos",   // lunes
+            LocalDate.of(2026, 10, 13) to "Dolorosos", // martes
+            LocalDate.of(2026, 10, 14) to "Gloriosos", // miércoles
+            LocalDate.of(2026, 10, 15) to "Luminosos", // jueves
+            LocalDate.of(2026, 10, 16) to "Dolorosos", // viernes
+            LocalDate.of(2026, 10, 17) to "Gozosos",   // sábado
+            LocalDate.of(2026, 10, 18) to "Gloriosos"  // domingo
         )
 
-        esperado.forEach { (dia, nombre) ->
-            val misterios = misteriosDelDia(dia)
-            assertEquals("Misterios del $dia", nombre, misterios.nombre)
+        esperado.forEach { (fecha, nombre) ->
+            val misterios = misteriosDelDia(fecha)
+            assertEquals("Misterios del $fecha", nombre, misterios.nombre)
             assertEquals(5, misterios.misterios.size)
             assertTrue(misterios.misterios.all { it.isNotBlank() })
         }
+    }
+
+    @Test
+    fun misteriosDelDia_usesJoyfulMysteriesOnChristmasAndAdventSundays() {
+        // Navidad de 2026 cae viernes; igual se rezan los Gozosos.
+        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 12, 25)).nombre)
+        // Primer y segundo domingo de Adviento.
+        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 11, 29)).nombre)
+        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 12, 6)).nombre)
+        // El domingo después de Navidad vuelve a la asignación semanal.
+        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 12, 27)).nombre)
+    }
+
+    @Test
+    fun misteriosDelDia_usesSorrowfulMysteriesOnLentSundaysUntilPalmSunday() {
+        // Miércoles de Ceniza (18/02/2026): día de semana, asignación normal.
+        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 2, 18)).nombre)
+        // Primer domingo de Cuaresma (22/02/2026): la regla de Rosarium se lo saltaba.
+        assertEquals("Dolorosos", misteriosDelDia(LocalDate.of(2026, 2, 22)).nombre)
+        // Domingo de Ramos (29/03/2026).
+        assertEquals("Dolorosos", misteriosDelDia(LocalDate.of(2026, 3, 29)).nombre)
+        // Domingo de Pascua (05/04/2026).
+        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 4, 5)).nombre)
     }
 
     @Test
@@ -120,6 +143,16 @@ class RosarioStepsTest {
 
         val domingo = LocalDate.of(2026, 10, 18)
         assertEquals("1.º Misterio Gloriosos", generarPasosRosario(domingo)[7].title)
+
+        // Las excepciones litúrgicas también cambian el nombre en los pasos.
+        assertEquals(
+            "1.º Misterio Gozosos",
+            generarPasosRosario(LocalDate.of(2026, 11, 29))[7].title
+        )
+        assertEquals(
+            "1.º Misterio Dolorosos",
+            generarPasosRosario(LocalDate.of(2026, 2, 22))[7].title
+        )
     }
 
     @Test
