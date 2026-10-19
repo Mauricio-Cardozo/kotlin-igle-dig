@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.data.user.UserPreferencesRepository
+import com.example.ui.oracion.MisterioRosario
 import com.example.ui.oracion.RosarioViewModel
 import com.example.util.FixedDateProvider
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +67,9 @@ class RosarioViewModelTest {
             streaksRepository.setRosarioStats(null, null, null)
             streaksRepository.guardarRosarioProgreso("", 0)
             userPreferencesRepository.setFontSizeMultiplier(UserPreferencesRepository.DEFAULT_FONT_SCALE)
+            userPreferencesRepository.setRosarioMisterioManual(
+                UserPreferencesRepository.DEFAULT_ROSARIO_MISTERIO_MANUAL
+            )
         }
     }
 
@@ -82,8 +86,71 @@ class RosarioViewModelTest {
         assertFalse(estado.isLoading)
         assertEquals(0, estado.pasoIndex)
         assertEquals(90, estado.total)
+        assertEquals(MisterioRosario.AUTOMATICO, estado.misterioManual)
         assertEquals("Señal de la Cruz", estado.paso?.title)
         assertEquals("1.º Misterio Gozosos", estado.pasos[7].title)
+    }
+
+    @Test
+    fun viewModel_manualMystery_overridesTheDayAndResetsTheSavedStep() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        viewModel.siguiente()
+        viewModel.siguiente()
+        esperarProgreso(2)
+
+        viewModel.setMisterioManual(MisterioRosario.DOLOROSOS)
+
+        val estado = viewModel.uiState.value
+        assertEquals(MisterioRosario.DOLOROSOS, estado.misterioManual)
+        assertEquals(0, estado.pasoIndex)
+        assertEquals("1.º Misterio Dolorosos", estado.pasos[7].title)
+        assertEquals("La Oración de Jesús en el huerto", estado.pasos[7].text)
+
+        // El índice guardado correspondía a la lista anterior: se descarta sin tocar la racha.
+        esperarSinProgreso()
+        val progreso = streaksRepository.getRosarioProgreso()
+        assertNull(progreso.fechaIso)
+        assertNull(progreso.paso)
+    }
+
+    @Test
+    fun viewModel_manualMystery_persistsForTheNextSession() = runTest(testDispatcher) {
+        val primera = crearViewModel()
+        primera.awaitLoaded()
+
+        primera.setMisterioManual(MisterioRosario.LUMINOSOS)
+        assertEquals(
+            MisterioRosario.LUMINOSOS.valor,
+            userPreferencesRepository.rosarioMisterioManual
+                .first { it == MisterioRosario.LUMINOSOS.valor }
+        )
+
+        val segunda = crearViewModel()
+        val estado = segunda.awaitLoaded()
+
+        assertEquals(MisterioRosario.LUMINOSOS, estado.misterioManual)
+        assertEquals("1.º Misterio Luminosos", estado.pasos[7].title)
+    }
+
+    @Test
+    fun viewModel_manualMystery_doesNotCountASecondCompletion() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        repeat(100) { viewModel.siguiente() }
+        viewModel.marcarCompletado()
+        assertEquals(1, streaksRepository.streakStatsFlow.first { it.rosarioTotal == 1 }.rosarioTotal)
+
+        // Cambiar de misterio después de terminar reinicia el rezo pero no vuelve a contar.
+        viewModel.setMisterioManual(MisterioRosario.GLORIOSOS)
+        assertEquals(0, viewModel.uiState.value.pasoIndex)
+        assertTrue(viewModel.uiState.value.completado)
+
+        repeat(100) { viewModel.siguiente() }
+        viewModel.marcarCompletado()
+        advanceUntilIdle()
+
+        assertEquals(1, streaksRepository.streakStatsFlow.first().rosarioTotal)
     }
 
     @Test
@@ -253,6 +320,15 @@ class RosarioViewModelTest {
         withContext(Dispatchers.IO) {
             withTimeout(5_000) {
                 while (streaksRepository.getRosarioProgreso().paso != paso) delay(1)
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que el progreso guardado quede vacío. */
+    private suspend fun esperarSinProgreso() {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (streaksRepository.getRosarioProgreso().paso != null) delay(1)
             }
         }
     }

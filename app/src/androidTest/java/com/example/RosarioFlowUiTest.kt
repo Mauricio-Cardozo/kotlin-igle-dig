@@ -2,6 +2,7 @@ package com.example
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -43,6 +44,10 @@ class RosarioFlowUiTest {
         // El runner resuelve el progreso del día de forma asíncrona: espera los botones.
         waitForTag("rosario_next")
 
+        // Normaliza la selección a Automático (pudo quedar un misterio fijo de otra corrida).
+        waitForTag("rosario_misterio_automatico")
+        composeRule.onNodeWithTag("rosario_misterio_automatico").performClick()
+
         // Deja el rezo al inicio (una corrida anterior del test pudo quedar a medias).
         var vueltas = 0
         while (hayNodo("rosario_prev") && vueltas < 100) {
@@ -71,5 +76,19 @@ class RosarioFlowUiTest {
         // "← Anterior" vuelve al padrenuestro de la decena.
         composeRule.onNodeWithTag("rosario_prev").performClick()
         composeRule.onNodeWithText("Paso 9 de 90").assertIsDisplayed()
+
+        // El selector manual fija otro misterio: vuelve al inicio con la lista nueva.
+        composeRule.onNodeWithTag("rosario_misterio_dolorosos").performClick()
+        composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
+        composeRule.onNodeWithTag("rosario_misterio_dolorosos").assertIsSelected()
+
+        repeat(7) { composeRule.onNodeWithTag("rosario_next").performClick() }
+        composeRule.onNodeWithText("1.º Misterio Dolorosos").assertIsDisplayed()
+        composeRule.onNodeWithText("Misterio 1 de 5 · Dolorosos").assertIsDisplayed()
+
+        // Se vuelve a Automático para no dejar la preferencia fija en el dispositivo.
+        composeRule.onNodeWithTag("rosario_misterio_automatico").performClick()
+        composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
+        composeRule.onNodeWithTag("rosario_misterio_automatico").assertIsSelected()
     }
 }
