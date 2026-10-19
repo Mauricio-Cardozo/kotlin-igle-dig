@@ -108,12 +108,7 @@ class RosarioViewModelTest {
         assertEquals("La Oración de Jesús en el huerto", estado.pasos[7].text)
 
         // El índice guardado correspondía a la lista anterior: se descarta sin tocar la racha.
-        // La preferencia se escribe después del borrado, así que esperarla garantiza ambos.
-        assertEquals(
-            MisterioRosario.DOLOROSOS.valor,
-            userPreferencesRepository.rosarioMisterioManual
-                .first { it == MisterioRosario.DOLOROSOS.valor }
-        )
+        esperarSinProgreso()
         val progreso = streaksRepository.getRosarioProgreso()
         assertNull(progreso.fechaIso)
         assertNull(progreso.paso)
@@ -128,11 +123,8 @@ class RosarioViewModelTest {
 
         viewModel.setMisterioManual(MisterioRosario.LUMINOSOS)
 
-        assertEquals(
-            MisterioRosario.LUMINOSOS.valor,
-            userPreferencesRepository.rosarioMisterioManual
-                .first { it == MisterioRosario.LUMINOSOS.valor }
-        )
+        // La preferencia se guarda después del borrado: esperarla garantiza ambos efectos.
+        esperarPreferencia(MisterioRosario.LUMINOSOS)
         assertNull(streaksRepository.getRosarioProgreso().paso)
     }
 
@@ -148,25 +140,22 @@ class RosarioViewModelTest {
     }
 
     @Test
-    fun viewModel_manualMystery_doesNotCountASecondCompletion() = runTest(testDispatcher) {
+    fun viewModel_manualMystery_keepsTheCompletionAfterChangingMystery() = runTest(testDispatcher) {
+        // Reanuda casi al final en vez de encolar 89 avances: menos escrituras de DataStore.
+        streaksRepository.guardarRosarioProgreso(hoy.toString(), 88)
+
         val viewModel = crearViewModel()
         viewModel.awaitLoaded()
-        repeat(100) { viewModel.siguiente() }
+        viewModel.siguiente()
         viewModel.marcarCompletado()
-        assertEquals(1, streaksRepository.streakStatsFlow.first { it.rosarioTotal == 1 }.rosarioTotal)
+        esperarTotalRosarios(1)
 
         // Cambiar de misterio después de terminar reinicia el rezo pero no vuelve a contar.
         viewModel.setMisterioManual(MisterioRosario.GLORIOSOS)
+
         assertEquals(0, viewModel.uiState.value.pasoIndex)
         assertTrue(viewModel.uiState.value.completado)
-        userPreferencesRepository.rosarioMisterioManual
-            .first { it == MisterioRosario.GLORIOSOS.valor }
-
-        repeat(100) { viewModel.siguiente() }
-        viewModel.marcarCompletado()
-        advanceUntilIdle()
-
-        assertEquals(1, streaksRepository.streakStatsFlow.first().rosarioTotal)
+        assertEquals(1, totalRosarios())
     }
 
     @Test
@@ -339,4 +328,36 @@ class RosarioViewModelTest {
             }
         }
     }
+
+    /** Espera (en tiempo real) a que el progreso guardado quede vacío. */
+    private suspend fun esperarSinProgreso() {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (streaksRepository.getRosarioProgreso().paso != null) delay(1)
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que DataStore publique la selección manual de misterios. */
+    private suspend fun esperarPreferencia(misterio: MisterioRosario) {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (userPreferencesRepository.rosarioMisterioManual.first() != misterio.valor) {
+                    delay(1)
+                }
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que el total histórico de rosarios llegue a [total]. */
+    private suspend fun esperarTotalRosarios(total: Int) {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (streaksRepository.streakStatsFlow.first().rosarioTotal != total) delay(1)
+            }
+        }
+    }
+
+    private suspend fun totalRosarios(): Int =
+        withContext(Dispatchers.IO) { streaksRepository.streakStatsFlow.first().rosarioTotal }
 }
