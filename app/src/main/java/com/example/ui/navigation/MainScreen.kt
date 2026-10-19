@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Church
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Icon
@@ -59,6 +63,7 @@ import com.example.ui.liturgia.LiturgiaScreen
 import com.example.ui.liturgia.LiturgiaViewModel
 import com.example.ui.liturgia.LiturgiaViewModelFactory
 import com.example.ui.liturgia.SantoDetalleScreen
+import com.example.ui.oracion.OracionHubScreen
 import com.example.ui.oracion.RosarioScreen
 import com.example.ui.oracion.RosarioViewModel
 import com.example.ui.oracion.RosarioViewModelFactory
@@ -334,12 +339,47 @@ fun MainScreen(
                     )
                 }
 
-                // Oración Tab
+                // Oración Tab (hub)
                 composable(BottomNavTab.ORACION.route) {
+                    OracionHubScreen(
+                        onSeccionClick = { ruta -> navController.navigate(ruta) }
+                    )
+                }
+
+                // Destinations originating from the Oración hub
+                composable(OracionDestinations.FAVORITOS) {
                     ComingSoonScreen(
-                        title = "Oración",
-                        icon = Icons.Default.VolunteerActivism,
-                        description = "El hub de oración (Coronilla, novenas, jaculatorias y oraciones de los santos) se integrará en las próximas fases."
+                        title = "Favoritos",
+                        icon = Icons.Default.Favorite,
+                        description = "Los versículos, numerales y lecturas guardadas se integrarán en la fase de Favoritos y Ajustes.",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+
+                composable(OracionDestinations.ORACIONES) {
+                    ComingSoonScreen(
+                        title = "Oraciones",
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        description = "Las oraciones del Vaticano (Padre nuestro, Ave María, Credo y más) se integrarán próximamente.",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+
+                composable(OracionDestinations.JACULATORIAS) {
+                    ComingSoonScreen(
+                        title = "Jaculatorias",
+                        icon = Icons.Default.LocalFireDepartment,
+                        description = "Las jaculatorias breves para el día se integrarán próximamente.",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+
+                composable(OracionDestinations.NOVENAS) {
+                    ComingSoonScreen(
+                        title = "Novenas",
+                        icon = Icons.Default.AutoStories,
+                        description = "Las 18 devociones de 9 días se integrarán próximamente.",
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
             }

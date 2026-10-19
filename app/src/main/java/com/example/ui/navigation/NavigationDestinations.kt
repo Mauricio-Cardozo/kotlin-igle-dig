@@ -65,3 +65,14 @@ object LiturgiaDestinations {
     fun evangelioRoute(fecha: String? = null): String =
         if (fecha.isNullOrBlank()) "evangelio" else "evangelio?fecha=$fecha"
 }
+
+/**
+ * Routes for the destinations of the Oración hub (same shape as the routes of
+ * `app/(tabs)/oracion.tsx` in the RN app).
+ */
+object OracionDestinations {
+    const val FAVORITOS = "favoritos"
+    const val ORACIONES = "oraciones"
+    const val JACULATORIAS = "oraciones/jaculatorias"
+    const val NOVENAS = "oraciones/novena"
+}
