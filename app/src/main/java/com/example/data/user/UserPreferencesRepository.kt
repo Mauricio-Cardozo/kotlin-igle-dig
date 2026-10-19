@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.data.db.BibliaVersion
@@ -23,6 +24,11 @@ class UserPreferencesRepository(private val context: Context) {
     companion object {
         val FONT_SIZE_MULTIPLIER_KEY = floatPreferencesKey("font_size_multiplier")
         val BIBLIA_VERSION_KEY = stringPreferencesKey("biblia_version")
+
+        /** Misterio manual del rosario: 0 = automático por tiempo litúrgico, 1–4 = fijo. */
+        val ROSARIO_MISTERIO_MANUAL_KEY = intPreferencesKey("rosario_misterio_manual")
+
+        const val DEFAULT_ROSARIO_MISTERIO_MANUAL = 0
         const val DEFAULT_FONT_SCALE = 1.0f
         const val MIN_FONT_SCALE = 0.8f
         const val MAX_FONT_SCALE = 1.5f
@@ -54,6 +60,17 @@ class UserPreferencesRepository(private val context: Context) {
      */
     val bibliaVersion: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[BIBLIA_VERSION_KEY] ?: BibliaVersion.DEFAULT.key
+    }
+
+    /** Misterio manual del rosario (0 = automático, 1–4 = fijo), con los valores de Rosarium. */
+    val rosarioMisterioManual: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[ROSARIO_MISTERIO_MANUAL_KEY] ?: DEFAULT_ROSARIO_MISTERIO_MANUAL
+    }
+
+    suspend fun setRosarioMisterioManual(valor: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[ROSARIO_MISTERIO_MANUAL_KEY] = valor.coerceIn(0, 4)
+        }
     }
 
     suspend fun setBibliaVersion(versionKey: String) {

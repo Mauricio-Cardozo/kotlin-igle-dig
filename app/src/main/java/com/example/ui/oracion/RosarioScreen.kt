@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -112,6 +114,11 @@ fun RosarioScreen(
             }
         )
 
+        SelectorMisterio(
+            seleccionado = uiState.misterioManual,
+            onSeleccion = viewModel::setMisterioManual
+        )
+
         if (mostrarCuentas) {
             CuentasDecena(label = paso.subtitle.orEmpty(), completadas = avesCompletadas)
         }
@@ -143,6 +150,48 @@ fun RosarioScreen(
             onSiguiente = viewModel::siguiente,
             onRezarDeNuevo = viewModel::rezarDeNuevo
         )
+    }
+}
+
+/**
+ * Selector manual de misterios: "Auto" sigue la regla litúrgica por fecha y las otras cuatro
+ * opciones fijan la decena del día. Cambiar la selección reinicia el rezo (los pasos cambian).
+ */
+@Composable
+private fun SelectorMisterio(
+    seleccionado: MisterioRosario,
+    onSeleccion: (MisterioRosario) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .testTag("rosario_misterios"),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        MisterioRosario.entries.forEach { opcion ->
+            val activo = opcion == seleccionado
+            val shape = RoundedCornerShape(Radii.xxl)
+            Box(
+                modifier = Modifier
+                    .clip(shape)
+                    .background(if (activo) GoldPrimary else Color.Transparent)
+                    .border(1.dp, if (activo) GoldPrimary else GoldSubtle, shape)
+                    .pressable(pressedAlpha = 0.7f) { onSeleccion(opcion) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                    .semantics { selected = activo }
+                    .testTag("rosario_misterio_${opcion.name.lowercase()}"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = opcion.etiqueta,
+                    color = if (activo) NavyBackground else GoldPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }
 

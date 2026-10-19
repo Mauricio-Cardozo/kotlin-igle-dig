@@ -101,6 +101,17 @@ class StreaksPreferencesRepository(
     }
 
     /**
+     * Descarta el progreso del día sin tocar la racha ni el total. Se usa al cambiar la
+     * selección de misterios: los 90 pasos cambian y el índice guardado deja de ser válido.
+     */
+    suspend fun limpiarRosarioProgreso() {
+        context.streaksDataStore.edit { prefs ->
+            prefs.remove(KEY_ROSARIO_PROGRESO_FECHA)
+            prefs.remove(KEY_ROSARIO_PROGRESO_PASO)
+        }
+    }
+
+    /**
      * Registra el rosario completado en [hoy]: actualiza la racha con la misma regla que la
      * RN ([calcularNuevaRacha]), suma el total histórico y descarta el progreso a medias.
      * Todo en una sola transacción para no dejar estados intermedios.

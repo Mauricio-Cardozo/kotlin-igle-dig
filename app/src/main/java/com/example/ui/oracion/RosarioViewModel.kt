@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -20,7 +21,8 @@ data class RosarioUiState(
     val isLoading: Boolean = true,
     val pasos: List<RosarioStep> = emptyList(),
     val pasoIndex: Int = 0,
-    val completado: Boolean = false
+    val completado: Boolean = false,
+    val misterioManual: MisterioRosario = MisterioRosario.AUTOMATICO
 ) {
     val paso: RosarioStep? get() = pasos.getOrNull(pasoIndex)
     val total: Int get() = pasos.size
@@ -51,8 +53,19 @@ class RosarioViewModel(
     private var fechaSesion: LocalDate = dateProvider.today()
 
     init {
-        _uiState.update { it.copy(pasos = generarPasosRosario(fechaSesion)) }
         viewModelScope.launch {
+            // La selección manual define los misterios antes de generar los pasos; sin
+            // preferencia guardada se usa la regla litúrgica (Automático).
+            val manual = MisterioRosario.desdeValor(
+                userPreferencesRepository.rosarioMisterioManual.first()
+            )
+            _uiState.update {
+                it.copy(
+                    pasos = generarPasosRosario(fechaSesion, manual),
+                    misterioManual = manual
+                )
+            }
+
             // Reanuda el rezo a medias si el paso guardado es de hoy. El progreso se borra al
             // completar, así que solo aparece cuando quedó un rezo sin terminar.
             val progreso = streaksRepository.getRosarioProgreso()
@@ -78,11 +91,32 @@ class RosarioViewModel(
         fechaSesion = hoy
         _uiState.update {
             it.copy(
-                pasos = generarPasosRosario(hoy),
+                pasos = generarPasosRosario(hoy, it.misterioManual),
                 pasoIndex = 0,
                 completado = false,
                 isLoading = false
             )
+        }
+    }
+
+    /**
+     * Cambia los misterios del rezo (o vuelve a la regla litúrgica). Los 90 pasos se regeneran
+     * y el rezo vuelve al inicio: el índice guardado del día corresponde a otra lista. La
+     * preferencia se persiste para las próximas sesiones y el progreso a medias se descarta.
+     */
+    fun setMisterioManual(misterio: MisterioRosario) {
+        if (misterio == _uiState.value.misterioManual) return
+
+        _uiState.update {
+            it.copy(
+                misterioManual = misterio,
+                pasos = generarPasosRosario(fechaSesion, misterio),
+                pasoIndex = 0
+            )
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.setRosarioMisterioManual(misterio.valor)
+            streaksRepository.limpiarRosarioProgreso()
         }
     }
 
