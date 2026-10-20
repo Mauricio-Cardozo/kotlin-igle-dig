@@ -5,7 +5,7 @@
 
 ## Seguimiento
 
-- [ ] 1. `refactor(oracion)`: extraer textos a `TextosRosario` (sin cambio de comportamiento)
+- [x] 1. `refactor(oracion)`: extraer textos a `TextosRosario` (sin cambio de comportamiento)
 - [ ] 2. `feat(oracion)`: idioma latín + preferencia `rosario_idioma` + `setIdioma()`
 - [ ] 3. `redesign(oracion)`: hoja de ajustes, cuentas en barra fina, footer limpio
 - [ ] 4. `docs(oracion)`: AGENTS.md / README (idiomas, plan para griego, estado de Oración)
