@@ -542,13 +542,13 @@ private fun FooterRosario(
                     strokeWidth = stroke
                 )
             }
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = Spacing.xl, vertical = Spacing.md)
     ) {
         if (pasoId != RosarioViewModel.PASO_COMPLETADO_ID) {
             FilaAutoavance(velocidad = autoavance, onSeleccion = onAutoavance)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 if (pasoIndex > 0) {
                     BotonRosario(
@@ -564,9 +564,9 @@ private fun FooterRosario(
                     principal = true,
                     onClick = onSiguiente,
                     testTag = "rosario_next",
-                    // La RN deja el botón al ancho del texto en el primer paso y lo estira a
-                    // la mitad del footer cuando ya existe "← Anterior".
-                    modifier = if (pasoIndex > 0) Modifier.weight(1f) else Modifier
+                    // El botón principal domina el footer: ocupa todo el ancho en el primer
+                    // paso y el doble que "← Anterior" cuando ambos conviven.
+                    modifier = if (pasoIndex > 0) Modifier.weight(2f) else Modifier.fillMaxWidth()
                 )
             }
         } else {
@@ -593,15 +593,15 @@ private fun FilaAutoavance(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(bottom = 10.dp)
+            .padding(bottom = Spacing.sm)
             .testTag("rosario_autoavance"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Avance",
             color = TextSecondary,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
         Autoavance.entries.forEach { opcion ->
@@ -631,7 +631,7 @@ private fun BotonRosario(
             .background(if (principal) GoldSubtle else NavySurfaceElevated)
             .border(1.dp, if (principal) GoldPrimary else GoldSubtle, shape)
             .pressable(pressedAlpha = 0.8f, onClick = onClick)
-            .padding(vertical = 16.dp)
+            .padding(vertical = Spacing.lg)
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
