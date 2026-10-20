@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.data.user.UserPreferencesRepository
+import com.example.ui.oracion.Autoavance
 import com.example.ui.oracion.MisterioRosario
 import com.example.ui.oracion.OracionOpcional
 import com.example.ui.oracion.OracionesRosario
@@ -80,6 +81,9 @@ class RosarioViewModelTest {
             )
             userPreferencesRepository.setRosarioOracionFinal(
                 UserPreferencesRepository.DEFAULT_ROSARIO_ORACION_FINAL
+            )
+            userPreferencesRepository.setRosarioAutoavance(
+                UserPreferencesRepository.DEFAULT_ROSARIO_AUTOAVANCE
             )
         }
     }
@@ -208,6 +212,39 @@ class RosarioViewModelTest {
         assertFalse(estado.oraciones.fatima)
         assertEquals(85, estado.total)
         assertFalse(estado.pasos.any { it.id.startsWith("ohjesus-") })
+    }
+
+    @Test
+    fun viewModel_autoavance_defaultsToOff() = runTest(testDispatcher) {
+        val estado = crearViewModel().awaitLoaded()
+
+        assertEquals(Autoavance.APAGADO, estado.autoavance)
+    }
+
+    @Test
+    fun viewModel_autoavance_isRestoredFromPreferences() = runTest(testDispatcher) {
+        userPreferencesRepository.setRosarioAutoavance(Autoavance.LENTO.valor)
+
+        val estado = crearViewModel().awaitLoaded()
+
+        assertEquals(Autoavance.LENTO, estado.autoavance)
+    }
+
+    @Test
+    fun viewModel_autoavance_changesSpeedWithoutTouchingThePrayer() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        viewModel.siguiente()
+        viewModel.siguiente()
+        esperarProgreso(2)
+
+        viewModel.setAutoavance(Autoavance.RAPIDO)
+
+        assertEquals(2, viewModel.uiState.value.pasoIndex)
+        assertEquals(Autoavance.RAPIDO, viewModel.uiState.value.autoavance)
+        esperarAutoavance(Autoavance.RAPIDO)
+        // La velocidad no invalida el progreso del día.
+        assertEquals(2, streaksRepository.getRosarioProgreso().paso)
     }
 
     @Test
@@ -412,6 +449,17 @@ class RosarioViewModelTest {
                         oracionFinal = userPreferencesRepository.rosarioOracionFinal.first()
                     )
                     if (predicado(actual)) break
+                    delay(1)
+                }
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que DataStore publique la velocidad de avance. */
+    private suspend fun esperarAutoavance(velocidad: Autoavance) {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (userPreferencesRepository.rosarioAutoavance.first() != velocidad.valor) {
                     delay(1)
                 }
             }

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -53,6 +54,11 @@ class RosarioFlowUiTest {
 
         // El runner resuelve el progreso del día de forma asíncrona: espera los botones.
         waitForTag("rosario_next")
+
+        // El avance automático pudo quedar activo de otra corrida: se apaga antes de normalizar
+        // el paso, para que no avance mientras el test recorre el rosario.
+        waitForTag("rosario_auto_apagado")
+        composeRule.onNodeWithTag("rosario_auto_apagado").performClick()
 
         // Normaliza la selección a Automático (pudo quedar un misterio fijo de otra corrida).
         waitForTag("rosario_misterio_automatico")
@@ -115,5 +121,15 @@ class RosarioFlowUiTest {
         composeRule.onNodeWithTag("rosario_opcion_salve").performClick()
         composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
         composeRule.onNodeWithTag("rosario_opcion_salve").assertIsSelected()
+
+        // El avance automático en Rápido pasa solo al siguiente paso al terminar el tiempo de
+        // rezo; se apaga enseguida para no dejarlo activo en el dispositivo.
+        composeRule.onNodeWithTag("rosario_auto_rapido").performClick()
+        composeRule.waitUntil(30_000) {
+            composeRule.onAllNodesWithText("Paso 2 de 90").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("rosario_auto_apagado").performClick()
+        composeRule.onNodeWithText("Paso 2 de 90").assertIsDisplayed()
+        composeRule.onNodeWithTag("rosario_auto_apagado").assertIsSelected()
     }
 }
