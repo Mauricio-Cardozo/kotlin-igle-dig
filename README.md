@@ -3,7 +3,7 @@
 Aplicación católica **100 % offline** para Android, escrita de forma nativa en **Kotlin + Jetpack Compose**.
 Es el port directo de la app de referencia en **React Native / Expo** ([`bible-app`](https://github.com/Mauricio-Cardozo/Biblia-app)); comparte **la misma base de datos SQLite** (`iglesia_digital.db`) y la misma identidad visual Navy/Gold.
 
-> **Estado:** en desarrollo activo. Biblia y Liturgia ya son funcionales; el bloque devocional (Oración, Misal, Ajustes) está pendiente. Ver [Roadmap](#-roadmap).
+> **Estado:** en desarrollo activo. Biblia, Liturgia y el Santo Rosario (español/latín) ya son funcionales; el resto del bloque devocional (Coronilla, novenas, jaculatorias), el Misal y Ajustes siguen pendientes. Ver [Roadmap](#-roadmap).
 
 ---
 
@@ -20,10 +20,13 @@ Es el port directo de la app de referencia en **React Native / Expo** ([`bible-a
 - **Evangelio del Día** — lecturas completas por fecha (`YYYY-MM-DD`), invocable desde el calendario.
 - **Calendario litúrgico** — grilla mensual con indicador de días con lectura; toca un día → Evangelio.
 - **Detalle del Santo** — biografía y, si corresponde, el **Propio de la misa** del día (`misal_santos`).
+- **Santo Rosario** — rezo guiado de 90 pasos con los misterios del día (reglas litúrgicas de Rosarium), reanudación a media decena, cuentas e hilo de la decena, racha al completar y avance automático.
+  - **Idioma del rezo**: español y **latín** (la interfaz sigue en español); cambiar de idioma conserva el paso y el progreso.
+  - **Hoja de ajustes** (⚙): misterio manual, oraciones opcionales (Fátima, Salve y oración final), velocidad del avance y tamaño de letra.
 
 ### 🔴 Pendiente
 
-- **Oración / Devocionario** — Rosario guiado, Coronilla, novenas y jaculatorias.
+- **Oración / Devocionario** — Coronilla, novenas y jaculatorias (el hub y el Rosario ya están).
 - **Misal Romano** — Ordinario, Prefacios, Plegarias Eucarísticas, Guía y Propio del tiempo.
 - **Favoritos** — pantalla de listado con filtros, notas y etiquetas (las entidades Room ya existen).
 - **Ajustes** — notificaciones diarias, tamaño de letra, respaldo/restauración (export/import JSON).
@@ -206,7 +209,7 @@ Definidos en `ui/theme/Color.kt`. El color del **badge litúrgico** varía segú
 | **1. Fundación** | Arquitectura, SQLite helper, Room, DataStore, DI y tema Compose | ✅ *(pendiente: renombrar paquete a `com.iglesiadigital.app`)* |
 | **2. Sagrada Biblia** | 3 niveles, búsqueda FTS4, favoritos y **selector Pueblo/Navarra** | ✅ |
 | **3. Liturgia y Misal** | Home, lecturas, Evangelio, Calendario y Santos | 🟡 *(falta el Misal: ordinario, prefacios, plegarias, guía)* |
-| **4. Oración y Devocionario** | Rosario, Coronilla, novenas, jaculatorias y rachas | 🔴 |
+| **4. Oración y Devocionario** | Rosario (español/latín), Coronilla, novenas, jaculatorias y rachas | 🟡 *(hecho: hub y Rosario; falta Coronilla, novenas, jaculatorias y oraciones de los santos)* |
 | **5. Calendario y Santos** | Calendario mensual, santos del día y fichas biográficas | ✅ |
 | **6. Favoritos, Ajustes y Utilidades** | Pantalla de favoritos, ajustes, export/import y diagnóstico | 🔴 |
 

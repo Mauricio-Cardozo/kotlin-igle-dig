@@ -1,6 +1,6 @@
 # Rosario v2 — plan de cambios (en curso)
 
-> Estado: **plan aprobado; implementación a cargo del usuario**, Claude revisa y corrige después.
+> Estado: **implementado en la rama `feat/rosario-v2`**; pendientes la revisión del usuario y la revisión litúrgica de los textos latinos.
 > Base ya hecha en la rama `claude/vibrant-franklin-gx4b70` (PR #42): pulido visual v1 (Spacing, áreas táctiles de 40 dp, cuentas adaptativas, footer con botón principal).
 
 ## Seguimiento
@@ -8,8 +8,8 @@
 - [x] 1. `refactor(oracion)`: extraer textos a `TextosRosario` (sin cambio de comportamiento)
 - [x] 2. `feat(oracion)`: idioma latín + preferencia `rosario_idioma` + `setIdioma()`
 - [x] 3. `redesign(oracion)`: hoja de ajustes, cuentas en barra fina, footer limpio
-- [ ] 4. `docs(oracion)`: AGENTS.md / README (idiomas, plan para griego, estado de Oración)
-- [ ] Tests unitarios nuevos e instrumentados ajustados (ver sección Tests)
+- [x] 4. `docs(oracion)`: AGENTS.md / README (idiomas, plan para griego, estado de Oración)
+- [x] Tests unitarios nuevos e instrumentados ajustados: 118 unitarios, 22 instrumentados y lint en verde (ver sección Tests)
 - [ ] Revisión de los textos en latín (litúrgica)
 
 ---
