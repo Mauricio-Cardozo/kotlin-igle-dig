@@ -39,7 +39,8 @@ import com.example.ui.theme.TextSecondary
  * Placeholder de las fases pendientes (Oración, Rosario, Coronilla, Misal y
  * Ajustes) con el estilo del shell pulido: back circular como `ScreenHeader`,
  * tarjeta plana a la escala del tema y press feedback por opacidad en vez de
- * los componentes M3 con ripple.
+ * los componentes M3 con ripple. [footer] permite colgar una acción propia al
+ * pie (por ejemplo, el acceso a Licencias desde el placeholder de Ajustes).
  */
 @Composable
 fun ComingSoonScreen(
@@ -47,7 +48,8 @@ fun ComingSoonScreen(
     icon: ImageVector,
     description: String,
     onBackClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null
 ) {
     Box(
         modifier = modifier
@@ -117,6 +119,16 @@ fun ComingSoonScreen(
                 lineHeight = 22.sp,
                 textAlign = TextAlign.Center
             )
+        }
+
+        if (footer != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = Spacing.lg)
+            ) {
+                footer()
+            }
         }
     }
 }

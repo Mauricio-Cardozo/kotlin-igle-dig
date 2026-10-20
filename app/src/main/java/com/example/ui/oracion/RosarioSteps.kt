@@ -415,8 +415,9 @@ private object RosarioTextos {
  * Misterios que toca rezar según la fecha. Con [manual] en [MisterioRosario.AUTOMATICO] la
  * asignación semanal es la de la RN (lunes y sábado Gozosos; martes y viernes Dolorosos;
  * domingo y miércoles Gloriosos; jueves Luminosos), con las excepciones del tiempo litúrgico
- * tomadas de Rosarium: el 25 de diciembre y los domingos de Adviento se rezan Gozosos, y los
- * domingos de Cuaresma (hasta el Domingo de Ramos) se rezan Dolorosos.
+ * tomadas de Rosarium (MIT+Credo, © 2024 Krixec — ver `THIRD_PARTY_LICENSES/Rosarium-LICENSE.txt`):
+ * el 25 de diciembre y los domingos de Adviento se rezan Gozosos, y los domingos de Cuaresma
+ * (hasta el Domingo de Ramos) se rezan Dolorosos.
  */
 fun misteriosDelDia(
     fecha: LocalDate,
