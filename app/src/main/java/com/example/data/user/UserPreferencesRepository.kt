@@ -37,11 +37,15 @@ class UserPreferencesRepository(private val context: Context) {
         /** Avance automático del rosario: 0 apagado, 1 lento, 2 normal, 3 rápido. */
         val ROSARIO_AUTOAVANCE_KEY = intPreferencesKey("rosario_autoavance")
 
+        /** Idioma del rezo del rosario: "es" español, "la" latín. */
+        val ROSARIO_IDIOMA_KEY = stringPreferencesKey("rosario_idioma")
+
         const val DEFAULT_ROSARIO_MISTERIO_MANUAL = 0
         const val DEFAULT_ROSARIO_FATIMA = true
         const val DEFAULT_ROSARIO_SALVE = true
         const val DEFAULT_ROSARIO_ORACION_FINAL = true
         const val DEFAULT_ROSARIO_AUTOAVANCE = 0
+        const val DEFAULT_ROSARIO_IDIOMA = "es"
         const val DEFAULT_FONT_SCALE = 1.0f
         const val MIN_FONT_SCALE = 0.8f
         const val MAX_FONT_SCALE = 1.5f
@@ -127,6 +131,17 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setRosarioAutoavance(valor: Int) {
         context.dataStore.edit { preferences ->
             preferences[ROSARIO_AUTOAVANCE_KEY] = valor.coerceIn(0, 3)
+        }
+    }
+
+    /** Idioma del rezo ("es" o "la"); el ViewModel lo interpreta con fallback a español. */
+    val rosarioIdioma: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[ROSARIO_IDIOMA_KEY] ?: DEFAULT_ROSARIO_IDIOMA
+    }
+
+    suspend fun setRosarioIdioma(clave: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ROSARIO_IDIOMA_KEY] = clave
         }
     }
 

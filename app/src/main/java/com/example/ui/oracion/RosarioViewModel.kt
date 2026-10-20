@@ -24,7 +24,8 @@ data class RosarioUiState(
     val completado: Boolean = false,
     val misterioManual: MisterioRosario = MisterioRosario.AUTOMATICO,
     val oraciones: OracionesRosario = OracionesRosario(),
-    val autoavance: Autoavance = Autoavance.APAGADO
+    val autoavance: Autoavance = Autoavance.APAGADO,
+    val idioma: IdiomaRosario = IdiomaRosario.ESPANOL
 ) {
     val paso: RosarioStep? get() = pasos.getOrNull(pasoIndex)
     val total: Int get() = pasos.size
@@ -70,12 +71,16 @@ class RosarioViewModel(
             val autoavance = Autoavance.desdeValor(
                 userPreferencesRepository.rosarioAutoavance.first()
             )
+            val idioma = IdiomaRosario.desdeClave(
+                userPreferencesRepository.rosarioIdioma.first()
+            )
             _uiState.update {
                 it.copy(
-                    pasos = generarPasosRosario(fechaSesion, manual, oraciones),
+                    pasos = generarPasosRosario(fechaSesion, manual, oraciones, idioma),
                     misterioManual = manual,
                     oraciones = oraciones,
-                    autoavance = autoavance
+                    autoavance = autoavance,
+                    idioma = idioma
                 )
             }
 
@@ -104,7 +109,7 @@ class RosarioViewModel(
         fechaSesion = hoy
         _uiState.update {
             it.copy(
-                pasos = generarPasosRosario(hoy, it.misterioManual, it.oraciones),
+                pasos = generarPasosRosario(hoy, it.misterioManual, it.oraciones, it.idioma),
                 pasoIndex = 0,
                 completado = false,
                 isLoading = false
@@ -123,7 +128,7 @@ class RosarioViewModel(
         _uiState.update {
             it.copy(
                 misterioManual = misterio,
-                pasos = generarPasosRosario(fechaSesion, misterio, it.oraciones),
+                pasos = generarPasosRosario(fechaSesion, misterio, it.oraciones, it.idioma),
                 pasoIndex = 0
             )
         }
@@ -150,7 +155,7 @@ class RosarioViewModel(
         _uiState.update {
             it.copy(
                 oraciones = nuevas,
-                pasos = generarPasosRosario(fechaSesion, it.misterioManual, nuevas),
+                pasos = generarPasosRosario(fechaSesion, it.misterioManual, nuevas, it.idioma),
                 pasoIndex = 0
             )
         }
@@ -181,6 +186,30 @@ class RosarioViewModel(
         _uiState.update { it.copy(autoavance = velocidad) }
         viewModelScope.launch {
             userPreferencesRepository.setRosarioAutoavance(velocidad.valor)
+        }
+    }
+
+    /**
+     * Cambia el idioma del rezo (español o latín). Los ids y el orden de los pasos son los
+     * mismos en todos los idiomas, así que se regeneran los textos conservando el paso actual
+     * y el progreso guardado del día: cambiar de idioma no reinicia el rezo.
+     */
+    fun setIdioma(idioma: IdiomaRosario) {
+        if (idioma == _uiState.value.idioma) return
+
+        _uiState.update {
+            it.copy(
+                idioma = idioma,
+                pasos = generarPasosRosario(
+                    fechaSesion,
+                    it.misterioManual,
+                    it.oraciones,
+                    idioma
+                )
+            )
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.setRosarioIdioma(idioma.clave)
         }
     }
 

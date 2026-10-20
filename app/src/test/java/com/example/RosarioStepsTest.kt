@@ -1,9 +1,12 @@
 package com.example
 
+import com.example.ui.oracion.IdiomaRosario
 import com.example.ui.oracion.MisterioRosario
 import com.example.ui.oracion.OracionesRosario
+import com.example.ui.oracion.SerieMisterios
 import com.example.ui.oracion.generarPasosRosario
 import com.example.ui.oracion.misteriosDelDia
+import com.example.ui.oracion.textosDe
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -23,62 +26,62 @@ class RosarioStepsTest {
     fun misteriosDelDia_matchesTheRnWeekdayAssignmentInOrdinaryTime() {
         // Semana del 12 al 18 de octubre de 2026: tiempo ordinario, sin excepciones litúrgicas.
         val esperado = mapOf(
-            LocalDate.of(2026, 10, 12) to "Gozosos",   // lunes
-            LocalDate.of(2026, 10, 13) to "Dolorosos", // martes
-            LocalDate.of(2026, 10, 14) to "Gloriosos", // miércoles
-            LocalDate.of(2026, 10, 15) to "Luminosos", // jueves
-            LocalDate.of(2026, 10, 16) to "Dolorosos", // viernes
-            LocalDate.of(2026, 10, 17) to "Gozosos",   // sábado
-            LocalDate.of(2026, 10, 18) to "Gloriosos"  // domingo
+            LocalDate.of(2026, 10, 12) to SerieMisterios.GOZOSOS,   // lunes
+            LocalDate.of(2026, 10, 13) to SerieMisterios.DOLOROSOS, // martes
+            LocalDate.of(2026, 10, 14) to SerieMisterios.GLORIOSOS, // miércoles
+            LocalDate.of(2026, 10, 15) to SerieMisterios.LUMINOSOS, // jueves
+            LocalDate.of(2026, 10, 16) to SerieMisterios.DOLOROSOS, // viernes
+            LocalDate.of(2026, 10, 17) to SerieMisterios.GOZOSOS,   // sábado
+            LocalDate.of(2026, 10, 18) to SerieMisterios.GLORIOSOS  // domingo
         )
+        val textos = textosDe(IdiomaRosario.ESPANOL)
 
-        esperado.forEach { (fecha, nombre) ->
-            val misterios = misteriosDelDia(fecha)
-            assertEquals("Misterios del $fecha", nombre, misterios.nombre)
-            assertEquals(5, misterios.misterios.size)
-            assertTrue(misterios.misterios.all { it.isNotBlank() })
+        esperado.forEach { (fecha, serie) ->
+            assertEquals("Misterios del $fecha", serie, misteriosDelDia(fecha))
+            assertEquals(5, textos.misteriosDe(serie).size)
+            assertTrue(textos.misteriosDe(serie).all { it.isNotBlank() })
         }
     }
 
     @Test
     fun misteriosDelDia_usesJoyfulMysteriesOnChristmasAndAdventSundays() {
         // Navidad de 2026 cae viernes; igual se rezan los Gozosos.
-        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 12, 25)).nombre)
+        assertEquals(SerieMisterios.GOZOSOS, misteriosDelDia(LocalDate.of(2026, 12, 25)))
         // Primer y segundo domingo de Adviento.
-        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 11, 29)).nombre)
-        assertEquals("Gozosos", misteriosDelDia(LocalDate.of(2026, 12, 6)).nombre)
+        assertEquals(SerieMisterios.GOZOSOS, misteriosDelDia(LocalDate.of(2026, 11, 29)))
+        assertEquals(SerieMisterios.GOZOSOS, misteriosDelDia(LocalDate.of(2026, 12, 6)))
         // El domingo después de Navidad vuelve a la asignación semanal.
-        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 12, 27)).nombre)
+        assertEquals(SerieMisterios.GLORIOSOS, misteriosDelDia(LocalDate.of(2026, 12, 27)))
     }
 
     @Test
     fun misteriosDelDia_usesSorrowfulMysteriesOnLentSundaysUntilPalmSunday() {
         // Miércoles de Ceniza (18/02/2026): día de semana, asignación normal.
-        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 2, 18)).nombre)
+        assertEquals(SerieMisterios.GLORIOSOS, misteriosDelDia(LocalDate.of(2026, 2, 18)))
         // Primer domingo de Cuaresma (22/02/2026): la regla de Rosarium se lo saltaba.
-        assertEquals("Dolorosos", misteriosDelDia(LocalDate.of(2026, 2, 22)).nombre)
+        assertEquals(SerieMisterios.DOLOROSOS, misteriosDelDia(LocalDate.of(2026, 2, 22)))
         // Domingo de Ramos (29/03/2026).
-        assertEquals("Dolorosos", misteriosDelDia(LocalDate.of(2026, 3, 29)).nombre)
+        assertEquals(SerieMisterios.DOLOROSOS, misteriosDelDia(LocalDate.of(2026, 3, 29)))
         // Domingo de Pascua (05/04/2026).
-        assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 4, 5)).nombre)
+        assertEquals(SerieMisterios.GLORIOSOS, misteriosDelDia(LocalDate.of(2026, 4, 5)))
     }
 
     @Test
     fun misteriosDelDia_manualSelectionOverridesTheLiturgicalRule() {
         // Domingo de Pascua en Automático: Gloriosos; fijado a mano manda la selección.
         val pascua = LocalDate.of(2026, 4, 5)
-        assertEquals("Gloriosos", misteriosDelDia(pascua).nombre)
-        assertEquals("Dolorosos", misteriosDelDia(pascua, MisterioRosario.DOLOROSOS).nombre)
-        assertEquals("Gloriosos", misteriosDelDia(pascua, MisterioRosario.GLORIOSOS).nombre)
+        assertEquals(SerieMisterios.GLORIOSOS, misteriosDelDia(pascua))
+        assertEquals(SerieMisterios.DOLOROSOS, misteriosDelDia(pascua, MisterioRosario.DOLOROSOS))
+        assertEquals(SerieMisterios.GLORIOSOS, misteriosDelDia(pascua, MisterioRosario.GLORIOSOS))
 
         // Navidad y domingos de Cuaresma también respetan la elección manual.
         assertEquals(
-            "Luminosos",
-            misteriosDelDia(LocalDate.of(2026, 12, 25), MisterioRosario.LUMINOSOS).nombre
+            SerieMisterios.LUMINOSOS,
+            misteriosDelDia(LocalDate.of(2026, 12, 25), MisterioRosario.LUMINOSOS)
         )
         assertEquals(
-            "Gozosos",
-            misteriosDelDia(LocalDate.of(2026, 2, 22), MisterioRosario.GOZOSOS).nombre
+            SerieMisterios.GOZOSOS,
+            misteriosDelDia(LocalDate.of(2026, 2, 22), MisterioRosario.GOZOSOS)
         )
     }
 
@@ -252,5 +255,61 @@ class RosarioStepsTest {
         assertFalse(letanias.contains("十"))
         assertTrue(letanias.contains("✝ ruega por nosotros."))
         assertTrue(letanias.contains("Cordero de Dios, que quitas el pecado del mundo"))
+    }
+
+    @Test
+    fun idiomaRosario_desdeClave_fallsBackToSpanish() {
+        assertEquals(IdiomaRosario.ESPANOL, IdiomaRosario.desdeClave("es"))
+        assertEquals(IdiomaRosario.LATIN, IdiomaRosario.desdeClave("la"))
+        assertEquals(IdiomaRosario.ESPANOL, IdiomaRosario.desdeClave("fr"))
+        assertEquals(IdiomaRosario.ESPANOL, IdiomaRosario.desdeClave(null))
+    }
+
+    @Test
+    fun generarPasosRosario_keepsTheSameIdsAndOrderInSpanishAndLatin() {
+        // Las ocho combinaciones de oraciones opcionales: el idioma no altera la secuencia.
+        val combinaciones = (0 until 8).map { bits ->
+            OracionesRosario(
+                fatima = (bits and 1) != 0,
+                salve = (bits and 2) != 0,
+                oracionFinal = (bits and 4) != 0
+            )
+        }
+
+        for (oraciones in combinaciones) {
+            val espanol = generarPasosRosario(
+                lunes,
+                oraciones = oraciones,
+                idioma = IdiomaRosario.ESPANOL
+            )
+            val latin = generarPasosRosario(
+                lunes,
+                oraciones = oraciones,
+                idioma = IdiomaRosario.LATIN
+            )
+
+            assertEquals(espanol.size, latin.size)
+            assertEquals(espanol.map { it.id }, latin.map { it.id })
+            assertEquals(espanol.map { it.mysteryIndex }, latin.map { it.mysteryIndex })
+            assertEquals(espanol.map { it.hailMaryIndex }, latin.map { it.hailMaryIndex })
+        }
+    }
+
+    @Test
+    fun generarPasosRosario_latinTextsAreCompleteAndUseTheirOwnPrayers() {
+        val latin = generarPasosRosario(lunes, idioma = IdiomaRosario.LATIN)
+
+        assertTrue(latin.all { it.title.isNotBlank() && it.text.isNotBlank() })
+        assertFalse(latin.any { it.title.contains("十") || it.text.contains("十") })
+
+        assertEquals("Signum Crucis", latin[0].title)
+        assertEquals("Mysterium I Gaudiosum", latin[7].title)
+        assertEquals("Mysterium 1 ex 5 · Gaudiosa", latin[7].subtitle)
+        assertEquals("Annuntiatio Filii Dei", latin[7].text)
+        assertEquals("Ave Maria 1", latin[3].title)
+        assertTrue(latin[2].text.contains("Pater noster,"))
+        assertTrue(latin.first { it.id == "salve" }.text.contains("Salve, Regina"))
+        assertFalse(latin.first { it.id == "salve" }.text.contains("Dios te salve"))
+        assertEquals("Iaculatoria Finalis", latin.first { it.id == "jaculatoria" }.title)
     }
 }
