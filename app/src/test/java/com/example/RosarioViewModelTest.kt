@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.data.user.UserPreferencesRepository
 import com.example.ui.oracion.Autoavance
+import com.example.ui.oracion.IdiomaRosario
 import com.example.ui.oracion.MisterioRosario
 import com.example.ui.oracion.OracionOpcional
 import com.example.ui.oracion.OracionesRosario
@@ -84,6 +85,9 @@ class RosarioViewModelTest {
             )
             userPreferencesRepository.setRosarioAutoavance(
                 UserPreferencesRepository.DEFAULT_ROSARIO_AUTOAVANCE
+            )
+            userPreferencesRepository.setRosarioIdioma(
+                UserPreferencesRepository.DEFAULT_ROSARIO_IDIOMA
             )
         }
     }
@@ -245,6 +249,59 @@ class RosarioViewModelTest {
         esperarAutoavance(Autoavance.RAPIDO)
         // La velocidad no invalida el progreso del día.
         assertEquals(2, streaksRepository.getRosarioProgreso().paso)
+    }
+
+    @Test
+    fun viewModel_idioma_defaultsToSpanish() = runTest(testDispatcher) {
+        val estado = crearViewModel().awaitLoaded()
+
+        assertEquals(IdiomaRosario.ESPANOL, estado.idioma)
+        assertEquals("Señal de la Cruz", estado.paso?.title)
+    }
+
+    @Test
+    fun viewModel_idioma_isRestoredFromPreferences() = runTest(testDispatcher) {
+        userPreferencesRepository.setRosarioIdioma(IdiomaRosario.LATIN.clave)
+
+        val estado = crearViewModel().awaitLoaded()
+
+        assertEquals(IdiomaRosario.LATIN, estado.idioma)
+        assertEquals("Signum Crucis", estado.paso?.title)
+        assertEquals(90, estado.total)
+    }
+
+    @Test
+    fun viewModel_setIdioma_regeneratesTheTextsAndKeepsTheStep() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        viewModel.siguiente()
+        viewModel.siguiente()
+        esperarProgreso(2)
+
+        viewModel.setIdioma(IdiomaRosario.LATIN)
+
+        val estado = viewModel.uiState.value
+        assertEquals(IdiomaRosario.LATIN, estado.idioma)
+        assertEquals(2, estado.pasoIndex)
+        assertEquals("Pater Noster", estado.paso?.title)
+        assertEquals(90, estado.total)
+        // Cambiar de idioma no invalida el progreso guardado del día.
+        assertEquals(2, streaksRepository.getRosarioProgreso().paso)
+        esperarIdioma(IdiomaRosario.LATIN)
+    }
+
+    @Test
+    fun viewModel_setIdioma_isKeptWhenChangingMysteryOrPrayers() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+
+        viewModel.setIdioma(IdiomaRosario.LATIN)
+        viewModel.setMisterioManual(MisterioRosario.DOLOROSOS)
+        assertEquals("Mysterium I Dolorosum", viewModel.uiState.value.pasos[7].title)
+
+        viewModel.setOracionOpcional(OracionOpcional.SALVE, false)
+        assertEquals("Mysterium I Dolorosum", viewModel.uiState.value.pasos[7].title)
+        assertFalse(viewModel.uiState.value.pasos.any { it.id == "salve" })
     }
 
     @Test
@@ -460,6 +517,17 @@ class RosarioViewModelTest {
         withContext(Dispatchers.IO) {
             withTimeout(5_000) {
                 while (userPreferencesRepository.rosarioAutoavance.first() != velocidad.valor) {
+                    delay(1)
+                }
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que DataStore publique el idioma del rezo. */
+    private suspend fun esperarIdioma(idioma: IdiomaRosario) {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (userPreferencesRepository.rosarioIdioma.first() != idioma.clave) {
                     delay(1)
                 }
             }

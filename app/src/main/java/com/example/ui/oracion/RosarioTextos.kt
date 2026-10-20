@@ -105,3 +105,9 @@ data class TextosRosario(
     fun tituloAvemaria(numero: Int): String =
         String.format(Locale.ROOT, plantillaAvemaria, numero)
 }
+
+/** Textos del rezo en [idioma]. */
+fun textosDe(idioma: IdiomaRosario): TextosRosario = when (idioma) {
+    IdiomaRosario.ESPANOL -> TEXTOS_ROSARIO_ES
+    IdiomaRosario.LATIN -> TEXTOS_ROSARIO_LA
+}

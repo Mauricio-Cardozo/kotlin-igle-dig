@@ -22,12 +22,6 @@ data class RosarioStep(
     val hailMaryIndex: Int? = null
 )
 
-/** Misterios que toca rezar según el día, con su nombre ("Gozosos", "Dolorosos", ...). */
-data class MisteriosDelDia(
-    val nombre: String,
-    val misterios: List<String>
-)
-
 /**
  * Selección manual de los misterios del rosario. Los valores 1–4 coinciden con los de
  * Rosarium (MIT, © 2024 Krixec) para no reinterpretar una preferencia ya guardada;
@@ -83,8 +77,14 @@ enum class OracionOpcional(val etiqueta: String) {
  * excepciones del tiempo litúrgico tomadas de Rosarium (MIT+Credo, © 2024 Krixec — ver
  * `THIRD_PARTY_LICENSES/Rosarium-LICENSE.txt`): el 25 de diciembre y los domingos de Adviento
  * se rezan Gozosos, y los domingos de Cuaresma (hasta el Domingo de Ramos) se rezan Dolorosos.
+ *
+ * Devuelve la serie, no sus textos: el nombre y los misterios se toman del idioma del rezo
+ * con [TextosRosario.nombreSerie] y [TextosRosario.misteriosDe].
  */
-private fun serieDelDia(fecha: LocalDate, manual: MisterioRosario): SerieMisterios {
+fun misteriosDelDia(
+    fecha: LocalDate,
+    manual: MisterioRosario = MisterioRosario.AUTOMATICO
+): SerieMisterios {
     when (manual) {
         MisterioRosario.GOZOSOS -> return SerieMisterios.GOZOSOS
         MisterioRosario.LUMINOSOS -> return SerieMisterios.LUMINOSOS
@@ -108,32 +108,24 @@ private fun serieDelDia(fecha: LocalDate, manual: MisterioRosario): SerieMisteri
     }
 }
 
-/** Misterios del día resueltos en español, con su nombre y las cinco decenas. */
-fun misteriosDelDia(
-    fecha: LocalDate,
-    manual: MisterioRosario = MisterioRosario.AUTOMATICO
-): MisteriosDelDia {
-    val serie = serieDelDia(fecha, manual)
-    return MisteriosDelDia(
-        nombre = TEXTOS_ROSARIO_ES.nombreSerie(serie).colectivo,
-        misterios = TEXTOS_ROSARIO_ES.misteriosDe(serie)
-    )
-}
-
 /**
- * Genera los pasos del Santo Rosario para [fecha]: apertura (señal, contrición, padrenuestro
- * y tres avemarías), las cinco decenas con sus diez avemarías cada una y el cierre (letanías,
- * oración final, padrenuestro por el Santo Padre, salve y jaculatoria), más el paso final de
- * rezo completado. Con todas las [oraciones] opcionales (el valor por defecto) son 90 pasos,
- * la misma secuencia de la RN.
+ * Genera los pasos del Santo Rosario para [fecha] en [idioma]: apertura (señal, contrición,
+ * padrenuestro y tres avemarías), las cinco decenas con sus diez avemarías cada una y el
+ * cierre (letanías, oración final, padrenuestro por el Santo Padre, salve y jaculatoria), más
+ * el paso final de rezo completado. Con todas las [oraciones] opcionales (el valor por
+ * defecto) son 90 pasos, la misma secuencia de la RN.
+ *
+ * Los ids y el orden de los pasos no dependen de [idioma]: cambiar de idioma no reinicia el
+ * rezo, solo cambia los textos.
  */
 fun generarPasosRosario(
     fecha: LocalDate,
     manual: MisterioRosario = MisterioRosario.AUTOMATICO,
-    oraciones: OracionesRosario = OracionesRosario()
+    oraciones: OracionesRosario = OracionesRosario(),
+    idioma: IdiomaRosario = IdiomaRosario.ESPANOL
 ): List<RosarioStep> {
-    val textos = TEXTOS_ROSARIO_ES
-    val serie = serieDelDia(fecha, manual)
+    val textos = textosDe(idioma)
+    val serie = misteriosDelDia(fecha, manual)
     val misterios = textos.misteriosDe(serie)
     val pasos = mutableListOf<RosarioStep>()
 
