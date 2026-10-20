@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -310,11 +311,15 @@ private fun PillRosario(
 /** Alto mínimo de las píldoras de los selectores, para un área táctil cómoda. */
 private val ALTURA_MINIMA_PILDORA = 40.dp
 
-/** Diámetro de cada cuenta de la decena, en paridad con la RN. */
-private val TAMANO_CUENTA = 14.dp
+/** Diámetro máximo de cada cuenta de la decena; se reduce si la fila no cabe. */
+private val TAMANO_CUENTA_MAX = 20.dp
 
-/** Separación entre cuentas; el hilo asoma en estos tramos. */
-private val SEPARACION_CUENTA = 6.dp
+/** Separación mínima y máxima entre cuentas; el hilo asoma en estos tramos. */
+private val SEPARACION_CUENTA_MIN = 4.dp
+private val SEPARACION_CUENTA_MAX = 10.dp
+
+/** Grosor del hilo que une las cuentas. */
+private val GROSOR_HILO = 2.dp
 
 /**
  * Cuentas de la decena en curso: el nombre del misterio ("Misterio N de 5 · Gozosos"), el hilo
@@ -349,7 +354,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
             .fillMaxWidth()
             .graphicsLayer {
                 alpha = 0.35f + 0.65f * entrada.value
-                translationX = (1f - entrada.value) * 12.dp.toPx()
+                translationX = (1f - entrada.value) * Spacing.md.toPx()
             }
             .drawBehind {
                 val stroke = 1.dp.toPx()
@@ -360,7 +365,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
                     strokeWidth = stroke
                 )
             }
-            .padding(vertical = 12.dp)
+            .padding(vertical = Spacing.md)
             .testTag("rosario_cuentas"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -371,70 +376,100 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.5.sp
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Spacing.sm))
 
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
-                .drawBehind {
-                    val diametro = TAMANO_CUENTA.toPx()
-                    val y = size.height / 2f
-                    val xInicio = diametro / 2f
-                    val xFin = size.width - diametro / 2f
-                    val grosor = 1.5.dp.toPx()
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl),
+            contentAlignment = Alignment.Center
+        ) {
+            // El diámetro se ajusta al ancho disponible para que las diez cuentas llenen la
+            // fila sin apretarse en pantallas angostas ni quedar perdidas en las anchas.
+            val tamano = minOf(
+                TAMANO_CUENTA_MAX,
+                (maxWidth - SEPARACION_CUENTA_MIN * (CUENTAS_POR_DECENA - 1)) / CUENTAS_POR_DECENA
+            )
+            val separacion = ((maxWidth - tamano * CUENTAS_POR_DECENA) / (CUENTAS_POR_DECENA - 1))
+                .coerceIn(SEPARACION_CUENTA_MIN, SEPARACION_CUENTA_MAX)
 
-                    // Hilo apagado: marca el recorrido completo y se ve entre las cuentas.
-                    drawLine(
-                        color = GoldSubtle.copy(alpha = 0.4f),
-                        start = Offset(xInicio, y),
-                        end = Offset(xFin, y),
-                        strokeWidth = grosor,
-                        cap = StrokeCap.Round
-                    )
-                    // Hilo encendido: crece hasta la última avemaría completada.
-                    if (fraccion > 0f) {
+            Row(
+                modifier = Modifier
+                    .drawBehind {
+                        val diametro = tamano.toPx()
+                        val y = size.height / 2f
+                        val xInicio = diametro / 2f
+                        val xFin = size.width - diametro / 2f
+                        val grosor = GROSOR_HILO.toPx()
+
+                        // Hilo apagado: marca el recorrido completo y se ve entre las cuentas.
                         drawLine(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(GoldSubtle, GoldLight),
-                                startX = xInicio,
-                                endX = xFin
-                            ),
+                            color = GoldSubtle.copy(alpha = 0.4f),
                             start = Offset(xInicio, y),
-                            end = Offset(xInicio + (xFin - xInicio) * fraccion, y),
+                            end = Offset(xFin, y),
                             strokeWidth = grosor,
                             cap = StrokeCap.Round
                         )
+                        // Hilo encendido: crece hasta la última avemaría completada.
+                        if (fraccion > 0f) {
+                            drawLine(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(GoldSubtle, GoldLight),
+                                    startX = xInicio,
+                                    endX = xFin
+                                ),
+                                start = Offset(xInicio, y),
+                                end = Offset(xInicio + (xFin - xInicio) * fraccion, y),
+                                strokeWidth = grosor,
+                                cap = StrokeCap.Round
+                            )
+                        }
                     }
-                }
-                .semantics {
-                    contentDescription =
-                        "Cuentas de la decena: $completadas de $CUENTAS_POR_DECENA"
-                }
-                .testTag("rosario_hilo"),
-            horizontalArrangement = Arrangement.spacedBy(SEPARACION_CUENTA),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(CUENTAS_POR_DECENA) { indice ->
-                val activa = indice < completadas
-                val colorFondo by animateColorAsState(
-                    targetValue = if (activa) GoldPrimary else NavySurfaceElevated,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "cuentaFondo"
-                )
-                val colorBorde by animateColorAsState(
-                    targetValue = if (activa) GoldLight else GoldSubtle,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "cuentaBorde"
-                )
+                    .semantics {
+                        contentDescription =
+                            "Cuentas de la decena: $completadas de $CUENTAS_POR_DECENA"
+                    }
+                    .testTag("rosario_hilo"),
+                horizontalArrangement = Arrangement.spacedBy(separacion),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(CUENTAS_POR_DECENA) { indice ->
+                    val activa = indice < completadas
+                    // La última cuenta rezada se destaca con un leve realce.
+                    val actual = indice == completadas - 1
+                    val colorFondo by animateColorAsState(
+                        targetValue = if (activa) GoldPrimary else NavySurfaceElevated,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaFondo"
+                    )
+                    val colorBorde by animateColorAsState(
+                        targetValue = if (activa) GoldLight else GoldSubtle,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaBorde"
+                    )
+                    val escala by animateFloatAsState(
+                        targetValue = if (actual) 1.2f else 1f,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaEscala"
+                    )
 
-                Box(
-                    modifier = Modifier
-                        .size(TAMANO_CUENTA)
-                        .clip(CircleShape)
-                        .background(colorFondo)
-                        .border(1.dp, colorBorde, CircleShape)
-                        .semantics { selected = activa }
-                        .testTag("rosario_cuenta")
-                )
+                    Box(
+                        modifier = Modifier
+                            .size(tamano)
+                            .graphicsLayer {
+                                scaleX = escala
+                                scaleY = escala
+                            }
+                            .clip(CircleShape)
+                            .background(colorFondo)
+                            .border(if (actual) 2.dp else 1.dp, colorBorde, CircleShape)
+                            .semantics {
+                                selected = activa
+                                contentDescription = "Ave María ${indice + 1} de $CUENTAS_POR_DECENA"
+                            }
+                            .testTag("rosario_cuenta")
+                    )
+                }
             }
         }
     }
