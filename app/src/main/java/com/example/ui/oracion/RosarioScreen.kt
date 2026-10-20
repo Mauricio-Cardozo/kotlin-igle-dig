@@ -119,6 +119,12 @@ fun RosarioScreen(
             onSeleccion = viewModel::setMisterioManual
         )
 
+        SelectorOraciones(
+            oraciones = uiState.oraciones,
+            onToggle = viewModel::setOracionOpcional,
+            advertirReinicio = uiState.pasoIndex > 0
+        )
+
         if (mostrarCuentas) {
             CuentasDecena(label = paso.subtitle.orEmpty(), completadas = avesCompletadas)
         }
@@ -171,27 +177,93 @@ private fun SelectorMisterio(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         MisterioRosario.entries.forEach { opcion ->
-            val activo = opcion == seleccionado
-            val shape = RoundedCornerShape(Radii.xxl)
-            Box(
-                modifier = Modifier
-                    .clip(shape)
-                    .background(if (activo) GoldPrimary else Color.Transparent)
-                    .border(1.dp, if (activo) GoldPrimary else GoldSubtle, shape)
-                    .pressable(pressedAlpha = 0.7f) { onSeleccion(opcion) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
-                    .semantics { selected = activo }
-                    .testTag("rosario_misterio_${opcion.name.lowercase()}"),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = opcion.etiqueta,
-                    color = if (activo) NavyBackground else GoldPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+            PillRosario(
+                texto = opcion.etiqueta,
+                activa = opcion == seleccionado,
+                testTag = "rosario_misterio_${opcion.name.lowercase()}",
+                onClick = { onSeleccion(opcion) }
+            )
+        }
+    }
+}
+
+/**
+ * Oraciones opcionales del rezo: Fátima después de cada decena, Salve y oración final en el
+ * cierre. Las tres vienen activas; apagarlas cambia la lista y reinicia el rezo del día.
+ */
+@Composable
+private fun SelectorOraciones(
+    oraciones: OracionesRosario,
+    onToggle: (OracionOpcional, Boolean) -> Unit,
+    advertirReinicio: Boolean
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("rosario_opciones")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = if (advertirReinicio) 2.dp else 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OracionOpcional.entries.forEach { opcion ->
+                val activa = opcion.incluidaEn(oraciones)
+                PillRosario(
+                    texto = if (activa) "✓ ${opcion.etiqueta}" else opcion.etiqueta,
+                    activa = activa,
+                    testTag = "rosario_opcion_${opcion.name.lowercase()}",
+                    compact = true,
+                    onClick = { onToggle(opcion, !activa) }
                 )
             }
         }
+
+        // El aviso solo aparece cuando hay un rezo empezado que se perdería al regenerar.
+        if (advertirReinicio) {
+            Text(
+                text = "Cambiar las opciones reinicia el rezo de hoy.",
+                color = TextSecondary,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
+            )
+        }
+    }
+}
+
+/** Píldora de los selectores del runner: rellena en oro cuando la opción está activa. */
+@Composable
+private fun PillRosario(
+    texto: String,
+    activa: Boolean,
+    testTag: String,
+    compact: Boolean = false,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(Radii.xxl)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(if (activa) GoldPrimary else Color.Transparent)
+            .border(1.dp, if (activa) GoldPrimary else GoldSubtle, shape)
+            .pressable(pressedAlpha = 0.7f, onClick = onClick)
+            .padding(
+                horizontal = if (compact) 12.dp else 14.dp,
+                vertical = if (compact) 6.dp else 7.dp
+            )
+            .semantics { selected = activa }
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = texto,
+            color = if (activa) NavyBackground else GoldPrimary,
+            fontSize = if (compact) 11.sp else 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 

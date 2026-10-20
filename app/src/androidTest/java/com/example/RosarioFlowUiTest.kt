@@ -1,7 +1,9 @@
 package com.example
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isSelected
@@ -35,6 +37,14 @@ class RosarioFlowUiTest {
     private fun hayNodo(tag: String): Boolean =
         composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
+    /** Deja activa una oración opcional sin depender del estado que haya quedado de otra corrida. */
+    private fun asegurarOpcionActiva(tag: String) {
+        val config = composeRule.onNodeWithTag(tag).fetchSemanticsNode().config
+        val activa = SemanticsProperties.Selected in config &&
+            config[SemanticsProperties.Selected]
+        if (!activa) composeRule.onNodeWithTag(tag).performClick()
+    }
+
     @Test
     fun homeRosarioCard_opensTheRunner_andAdvancesWithTheBeads() {
         // Espera a que el Home esté listo y abre el rosario desde su tarjeta de racha.
@@ -47,6 +57,12 @@ class RosarioFlowUiTest {
         // Normaliza la selección a Automático (pudo quedar un misterio fijo de otra corrida).
         waitForTag("rosario_misterio_automatico")
         composeRule.onNodeWithTag("rosario_misterio_automatico").performClick()
+
+        // Las tres oraciones opcionales deben estar activas para partir de la secuencia de 90.
+        waitForTag("rosario_opcion_fatima")
+        asegurarOpcionActiva("rosario_opcion_fatima")
+        asegurarOpcionActiva("rosario_opcion_salve")
+        asegurarOpcionActiva("rosario_opcion_oracion_final")
 
         // Deja el rezo al inicio (una corrida anterior del test pudo quedar a medias).
         var vueltas = 0
@@ -90,5 +106,14 @@ class RosarioFlowUiTest {
         composeRule.onNodeWithTag("rosario_misterio_automatico").performClick()
         composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
         composeRule.onNodeWithTag("rosario_misterio_automatico").assertIsSelected()
+
+        // Apagar la Salve acorta la lista y reinicia el rezo; volver a encenderla restaura 90.
+        composeRule.onNodeWithTag("rosario_opcion_salve").performClick()
+        composeRule.onNodeWithText("Paso 1 de 89").assertIsDisplayed()
+        composeRule.onNodeWithTag("rosario_opcion_salve").assertIsNotSelected()
+
+        composeRule.onNodeWithTag("rosario_opcion_salve").performClick()
+        composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
+        composeRule.onNodeWithTag("rosario_opcion_salve").assertIsSelected()
     }
 }
