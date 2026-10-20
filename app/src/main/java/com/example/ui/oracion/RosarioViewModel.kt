@@ -23,7 +23,8 @@ data class RosarioUiState(
     val pasoIndex: Int = 0,
     val completado: Boolean = false,
     val misterioManual: MisterioRosario = MisterioRosario.AUTOMATICO,
-    val oraciones: OracionesRosario = OracionesRosario()
+    val oraciones: OracionesRosario = OracionesRosario(),
+    val autoavance: Autoavance = Autoavance.APAGADO
 ) {
     val paso: RosarioStep? get() = pasos.getOrNull(pasoIndex)
     val total: Int get() = pasos.size
@@ -66,11 +67,15 @@ class RosarioViewModel(
                 salve = userPreferencesRepository.rosarioSalve.first(),
                 oracionFinal = userPreferencesRepository.rosarioOracionFinal.first()
             )
+            val autoavance = Autoavance.desdeValor(
+                userPreferencesRepository.rosarioAutoavance.first()
+            )
             _uiState.update {
                 it.copy(
                     pasos = generarPasosRosario(fechaSesion, manual, oraciones),
                     misterioManual = manual,
-                    oraciones = oraciones
+                    oraciones = oraciones,
+                    autoavance = autoavance
                 )
             }
 
@@ -164,6 +169,20 @@ class RosarioViewModel(
     fun siguiente() = moverA(_uiState.value.pasoIndex + 1)
 
     fun anterior() = moverA(_uiState.value.pasoIndex - 1)
+
+    /**
+     * Cambia la velocidad del avance automático (o lo apaga). No toca los pasos ni el progreso:
+     * solo define cuánto se espera antes de pasar solo al siguiente, y se recuerda entre
+     * sesiones.
+     */
+    fun setAutoavance(velocidad: Autoavance) {
+        if (velocidad == _uiState.value.autoavance) return
+
+        _uiState.update { it.copy(autoavance = velocidad) }
+        viewModelScope.launch {
+            userPreferencesRepository.setRosarioAutoavance(velocidad.valor)
+        }
+    }
 
     private fun moverA(index: Int) {
         val estado = _uiState.value
