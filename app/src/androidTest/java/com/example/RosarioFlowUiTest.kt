@@ -81,12 +81,14 @@ class RosarioFlowUiTest {
         composeRule.onNodeWithText("Señal de la Cruz").assertIsDisplayed()
         composeRule.onNodeWithText("Paso 1 de 90").assertIsDisplayed()
         composeRule.onAllNodesWithTag("rosario_cuenta").assertCountEquals(0)
+        composeRule.onAllNodesWithTag("rosario_hilo").assertCountEquals(0)
 
-        // Octavo paso: primer misterio del día, con sus diez cuentas apagadas.
+        // Octavo paso: primer misterio del día, con sus diez cuentas apagadas y el hilo tenue.
         repeat(7) { composeRule.onNodeWithTag("rosario_next").performClick() }
         composeRule.onNodeWithText("Paso 8 de 90").assertIsDisplayed()
         composeRule.onNodeWithText("Misterio 1 de 5 ·", substring = true).assertIsDisplayed()
         composeRule.onAllNodesWithTag("rosario_cuenta").assertCountEquals(10)
+        composeRule.onAllNodesWithTag("rosario_hilo").assertCountEquals(1)
         composeRule.onAllNodes(hasTestTag("rosario_cuenta") and isSelected()).assertCountEquals(0)
 
         // Padrenuestro y primera avemaría: se enciende una sola cuenta.
@@ -98,6 +100,16 @@ class RosarioFlowUiTest {
         // "← Anterior" vuelve al padrenuestro de la decena.
         composeRule.onNodeWithTag("rosario_prev").performClick()
         composeRule.onNodeWithText("Paso 9 de 90").assertIsDisplayed()
+
+        // Hasta la décima avemaría: el hilo y las diez cuentas quedan completos.
+        repeat(10) { composeRule.onNodeWithTag("rosario_next").performClick() }
+        composeRule.onNodeWithText("10ª Avemaría").assertIsDisplayed()
+        composeRule.onAllNodes(hasTestTag("rosario_cuenta") and isSelected()).assertCountEquals(10)
+
+        // La decena siguiente reinicia el hilo y las cuentas.
+        repeat(4) { composeRule.onNodeWithTag("rosario_next").performClick() }
+        composeRule.onNodeWithText("Misterio 2 de 5 ·", substring = true).assertIsDisplayed()
+        composeRule.onAllNodes(hasTestTag("rosario_cuenta") and isSelected()).assertCountEquals(0)
 
         // El selector manual fija otro misterio: vuelve al inicio con la lista nueva.
         composeRule.onNodeWithTag("rosario_misterio_dolorosos").performClick()
