@@ -22,7 +22,8 @@ data class RosarioUiState(
     val pasos: List<RosarioStep> = emptyList(),
     val pasoIndex: Int = 0,
     val completado: Boolean = false,
-    val misterioManual: MisterioRosario = MisterioRosario.AUTOMATICO
+    val misterioManual: MisterioRosario = MisterioRosario.AUTOMATICO,
+    val oraciones: OracionesRosario = OracionesRosario()
 ) {
     val paso: RosarioStep? get() = pasos.getOrNull(pasoIndex)
     val total: Int get() = pasos.size
@@ -55,14 +56,21 @@ class RosarioViewModel(
     init {
         viewModelScope.launch {
             // La selección manual define los misterios antes de generar los pasos; sin
-            // preferencia guardada se usa la regla litúrgica (Automático).
+            // preferencia guardada se usa la regla litúrgica (Automático). Las oraciones
+            // opcionales vienen activas por defecto, como en la secuencia de la RN.
             val manual = MisterioRosario.desdeValor(
                 userPreferencesRepository.rosarioMisterioManual.first()
             )
+            val oraciones = OracionesRosario(
+                fatima = userPreferencesRepository.rosarioFatima.first(),
+                salve = userPreferencesRepository.rosarioSalve.first(),
+                oracionFinal = userPreferencesRepository.rosarioOracionFinal.first()
+            )
             _uiState.update {
                 it.copy(
-                    pasos = generarPasosRosario(fechaSesion, manual),
-                    misterioManual = manual
+                    pasos = generarPasosRosario(fechaSesion, manual, oraciones),
+                    misterioManual = manual,
+                    oraciones = oraciones
                 )
             }
 
@@ -91,7 +99,7 @@ class RosarioViewModel(
         fechaSesion = hoy
         _uiState.update {
             it.copy(
-                pasos = generarPasosRosario(hoy, it.misterioManual),
+                pasos = generarPasosRosario(hoy, it.misterioManual, it.oraciones),
                 pasoIndex = 0,
                 completado = false,
                 isLoading = false
@@ -100,7 +108,7 @@ class RosarioViewModel(
     }
 
     /**
-     * Cambia los misterios del rezo (o vuelve a la regla litúrgica). Los 90 pasos se regeneran
+     * Cambia los misterios del rezo (o vuelve a la regla litúrgica). Los pasos se regeneran
      * y el rezo vuelve al inicio: el índice guardado del día corresponde a otra lista. La
      * preferencia se persiste para las próximas sesiones y el progreso a medias se descarta.
      */
@@ -110,7 +118,7 @@ class RosarioViewModel(
         _uiState.update {
             it.copy(
                 misterioManual = misterio,
-                pasos = generarPasosRosario(fechaSesion, misterio),
+                pasos = generarPasosRosario(fechaSesion, misterio, it.oraciones),
                 pasoIndex = 0
             )
         }
@@ -119,6 +127,37 @@ class RosarioViewModel(
             // tiene la garantía de que el progreso del día ya quedó descartado.
             streaksRepository.limpiarRosarioProgreso()
             userPreferencesRepository.setRosarioMisterioManual(misterio.valor)
+        }
+    }
+
+    /**
+     * Incluye o quita una oración opcional: la Fátima tras cada decena, la Salve o la oración
+     * final en el cierre. La lista de pasos cambia de longitud, así que se regenera y el rezo
+     * vuelve al inicio: el índice guardado del día ya no corresponde. La preferencia se
+     * persiste para las próximas sesiones y el progreso a medias se descarta sin tocar la
+     * racha ni el total.
+     */
+    fun setOracionOpcional(opcion: OracionOpcional, incluida: Boolean) {
+        val actual = _uiState.value.oraciones
+        if (opcion.incluidaEn(actual) == incluida) return
+
+        val nuevas = opcion.con(actual, incluida)
+        _uiState.update {
+            it.copy(
+                oraciones = nuevas,
+                pasos = generarPasosRosario(fechaSesion, it.misterioManual, nuevas),
+                pasoIndex = 0
+            )
+        }
+        viewModelScope.launch {
+            // Mismo orden que con el misterio: primero el borrado y después la preferencia.
+            streaksRepository.limpiarRosarioProgreso()
+            when (opcion) {
+                OracionOpcional.FATIMA -> userPreferencesRepository.setRosarioFatima(incluida)
+                OracionOpcional.SALVE -> userPreferencesRepository.setRosarioSalve(incluida)
+                OracionOpcional.ORACION_FINAL ->
+                    userPreferencesRepository.setRosarioOracionFinal(incluida)
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.data.user
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -28,7 +29,15 @@ class UserPreferencesRepository(private val context: Context) {
         /** Misterio manual del rosario: 0 = automático por tiempo litúrgico, 1–4 = fijo. */
         val ROSARIO_MISTERIO_MANUAL_KEY = intPreferencesKey("rosario_misterio_manual")
 
+        /** Oraciones opcionales del rosario: Fátima tras cada decena, Salve y oración final. */
+        val ROSARIO_FATIMA_KEY = booleanPreferencesKey("rosario_fatima")
+        val ROSARIO_SALVE_KEY = booleanPreferencesKey("rosario_salve")
+        val ROSARIO_ORACION_FINAL_KEY = booleanPreferencesKey("rosario_oracion_final")
+
         const val DEFAULT_ROSARIO_MISTERIO_MANUAL = 0
+        const val DEFAULT_ROSARIO_FATIMA = true
+        const val DEFAULT_ROSARIO_SALVE = true
+        const val DEFAULT_ROSARIO_ORACION_FINAL = true
         const val DEFAULT_FONT_SCALE = 1.0f
         const val MIN_FONT_SCALE = 0.8f
         const val MAX_FONT_SCALE = 1.5f
@@ -70,6 +79,39 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setRosarioMisterioManual(valor: Int) {
         context.dataStore.edit { preferences ->
             preferences[ROSARIO_MISTERIO_MANUAL_KEY] = valor.coerceIn(0, 4)
+        }
+    }
+
+    /** Oración de Fátima ("Oh Jesús Mío") incluida después de cada decena. */
+    val rosarioFatima: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ROSARIO_FATIMA_KEY] ?: DEFAULT_ROSARIO_FATIMA
+    }
+
+    /** Salve Regina incluida en el cierre del rosario. */
+    val rosarioSalve: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ROSARIO_SALVE_KEY] ?: DEFAULT_ROSARIO_SALVE
+    }
+
+    /** Oración final incluida en el cierre del rosario. */
+    val rosarioOracionFinal: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ROSARIO_ORACION_FINAL_KEY] ?: DEFAULT_ROSARIO_ORACION_FINAL
+    }
+
+    suspend fun setRosarioFatima(activa: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ROSARIO_FATIMA_KEY] = activa
+        }
+    }
+
+    suspend fun setRosarioSalve(activa: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ROSARIO_SALVE_KEY] = activa
+        }
+    }
+
+    suspend fun setRosarioOracionFinal(activa: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ROSARIO_ORACION_FINAL_KEY] = activa
         }
     }
 
