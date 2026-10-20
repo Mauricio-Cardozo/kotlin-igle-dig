@@ -10,12 +10,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.common.FontSizeControl
+import com.example.ui.common.LoadingState
 import com.example.ui.common.ScreenHeader
 import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
@@ -58,6 +61,7 @@ import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.NavySeparator
 import com.example.ui.theme.NavySurfaceElevated
 import com.example.ui.theme.Radii
+import com.example.ui.theme.Spacing
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
@@ -114,7 +118,9 @@ fun RosarioScreen(
                 .fillMaxSize()
                 .background(NavyBackground)
                 .testTag("screen_rosario")
-        )
+        ) {
+            LoadingState()
+        }
         return
     }
 
@@ -168,7 +174,7 @@ fun RosarioScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 60.dp),
+                .padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xl, bottom = Spacing.xxxl),
             verticalArrangement = Arrangement.Center
         ) {
             Crossfade(
@@ -209,9 +215,9 @@ private fun SelectorMisterio(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .padding(horizontal = Spacing.xl, vertical = Spacing.sm)
             .testTag("rosario_misterios"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         MisterioRosario.entries.forEach { opcion ->
             PillRosario(
@@ -243,9 +249,9 @@ private fun SelectorOraciones(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = if (advertirReinicio) 2.dp else 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = Spacing.xl)
+                .padding(bottom = if (advertirReinicio) Spacing.xs else Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             OracionOpcional.entries.forEach { opcion ->
                 val activa = opcion.incluidaEn(oraciones)
@@ -264,8 +270,8 @@ private fun SelectorOraciones(
             Text(
                 text = "Cambiar las opciones reinicia el rezo de hoy.",
                 color = TextSecondary,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.sm)
             )
         }
     }
@@ -286,11 +292,9 @@ private fun PillRosario(
             .clip(shape)
             .background(if (activa) GoldPrimary else Color.Transparent)
             .border(1.dp, if (activa) GoldPrimary else GoldSubtle, shape)
+            .heightIn(min = ALTURA_MINIMA_PILDORA)
             .pressable(pressedAlpha = 0.7f, onClick = onClick)
-            .padding(
-                horizontal = if (compact) 12.dp else 14.dp,
-                vertical = if (compact) 6.dp else 7.dp
-            )
+            .padding(horizontal = if (compact) Spacing.md else Spacing.lg)
             .semantics { selected = activa }
             .testTag(testTag),
         contentAlignment = Alignment.Center
@@ -298,17 +302,24 @@ private fun PillRosario(
         Text(
             text = texto,
             color = if (activa) NavyBackground else GoldPrimary,
-            fontSize = if (compact) 11.sp else 12.sp,
+            fontSize = if (compact) 12.sp else 13.sp,
             fontWeight = FontWeight.SemiBold
         )
     }
 }
 
-/** Diámetro de cada cuenta de la decena, en paridad con la RN. */
-private val TAMANO_CUENTA = 14.dp
+/** Alto mínimo de las píldoras de los selectores, para un área táctil cómoda. */
+private val ALTURA_MINIMA_PILDORA = 40.dp
 
-/** Separación entre cuentas; el hilo asoma en estos tramos. */
-private val SEPARACION_CUENTA = 6.dp
+/** Diámetro máximo de cada cuenta de la decena; se reduce si la fila no cabe. */
+private val TAMANO_CUENTA_MAX = 20.dp
+
+/** Separación mínima y máxima entre cuentas; el hilo asoma en estos tramos. */
+private val SEPARACION_CUENTA_MIN = 4.dp
+private val SEPARACION_CUENTA_MAX = 10.dp
+
+/** Grosor del hilo que une las cuentas. */
+private val GROSOR_HILO = 2.dp
 
 /**
  * Cuentas de la decena en curso: el nombre del misterio ("Misterio N de 5 · Gozosos"), el hilo
@@ -343,7 +354,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
             .fillMaxWidth()
             .graphicsLayer {
                 alpha = 0.35f + 0.65f * entrada.value
-                translationX = (1f - entrada.value) * 12.dp.toPx()
+                translationX = (1f - entrada.value) * Spacing.md.toPx()
             }
             .drawBehind {
                 val stroke = 1.dp.toPx()
@@ -354,7 +365,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
                     strokeWidth = stroke
                 )
             }
-            .padding(vertical = 12.dp)
+            .padding(vertical = Spacing.md)
             .testTag("rosario_cuentas"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -365,70 +376,100 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.5.sp
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Spacing.sm))
 
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
-                .drawBehind {
-                    val diametro = TAMANO_CUENTA.toPx()
-                    val y = size.height / 2f
-                    val xInicio = diametro / 2f
-                    val xFin = size.width - diametro / 2f
-                    val grosor = 1.5.dp.toPx()
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl),
+            contentAlignment = Alignment.Center
+        ) {
+            // El diámetro se ajusta al ancho disponible para que las diez cuentas llenen la
+            // fila sin apretarse en pantallas angostas ni quedar perdidas en las anchas.
+            val tamano = minOf(
+                TAMANO_CUENTA_MAX,
+                (maxWidth - SEPARACION_CUENTA_MIN * (CUENTAS_POR_DECENA - 1)) / CUENTAS_POR_DECENA
+            )
+            val separacion = ((maxWidth - tamano * CUENTAS_POR_DECENA) / (CUENTAS_POR_DECENA - 1))
+                .coerceIn(SEPARACION_CUENTA_MIN, SEPARACION_CUENTA_MAX)
 
-                    // Hilo apagado: marca el recorrido completo y se ve entre las cuentas.
-                    drawLine(
-                        color = GoldSubtle.copy(alpha = 0.4f),
-                        start = Offset(xInicio, y),
-                        end = Offset(xFin, y),
-                        strokeWidth = grosor,
-                        cap = StrokeCap.Round
-                    )
-                    // Hilo encendido: crece hasta la última avemaría completada.
-                    if (fraccion > 0f) {
+            Row(
+                modifier = Modifier
+                    .drawBehind {
+                        val diametro = tamano.toPx()
+                        val y = size.height / 2f
+                        val xInicio = diametro / 2f
+                        val xFin = size.width - diametro / 2f
+                        val grosor = GROSOR_HILO.toPx()
+
+                        // Hilo apagado: marca el recorrido completo y se ve entre las cuentas.
                         drawLine(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(GoldSubtle, GoldLight),
-                                startX = xInicio,
-                                endX = xFin
-                            ),
+                            color = GoldSubtle.copy(alpha = 0.4f),
                             start = Offset(xInicio, y),
-                            end = Offset(xInicio + (xFin - xInicio) * fraccion, y),
+                            end = Offset(xFin, y),
                             strokeWidth = grosor,
                             cap = StrokeCap.Round
                         )
+                        // Hilo encendido: crece hasta la última avemaría completada.
+                        if (fraccion > 0f) {
+                            drawLine(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(GoldSubtle, GoldLight),
+                                    startX = xInicio,
+                                    endX = xFin
+                                ),
+                                start = Offset(xInicio, y),
+                                end = Offset(xInicio + (xFin - xInicio) * fraccion, y),
+                                strokeWidth = grosor,
+                                cap = StrokeCap.Round
+                            )
+                        }
                     }
-                }
-                .semantics {
-                    contentDescription =
-                        "Cuentas de la decena: $completadas de $CUENTAS_POR_DECENA"
-                }
-                .testTag("rosario_hilo"),
-            horizontalArrangement = Arrangement.spacedBy(SEPARACION_CUENTA),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(CUENTAS_POR_DECENA) { indice ->
-                val activa = indice < completadas
-                val colorFondo by animateColorAsState(
-                    targetValue = if (activa) GoldPrimary else NavySurfaceElevated,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "cuentaFondo"
-                )
-                val colorBorde by animateColorAsState(
-                    targetValue = if (activa) GoldLight else GoldSubtle,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "cuentaBorde"
-                )
+                    .semantics {
+                        contentDescription =
+                            "Cuentas de la decena: $completadas de $CUENTAS_POR_DECENA"
+                    }
+                    .testTag("rosario_hilo"),
+                horizontalArrangement = Arrangement.spacedBy(separacion),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(CUENTAS_POR_DECENA) { indice ->
+                    val activa = indice < completadas
+                    // La última cuenta rezada se destaca con un leve realce.
+                    val actual = indice == completadas - 1
+                    val colorFondo by animateColorAsState(
+                        targetValue = if (activa) GoldPrimary else NavySurfaceElevated,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaFondo"
+                    )
+                    val colorBorde by animateColorAsState(
+                        targetValue = if (activa) GoldLight else GoldSubtle,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaBorde"
+                    )
+                    val escala by animateFloatAsState(
+                        targetValue = if (actual) 1.2f else 1f,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cuentaEscala"
+                    )
 
-                Box(
-                    modifier = Modifier
-                        .size(TAMANO_CUENTA)
-                        .clip(CircleShape)
-                        .background(colorFondo)
-                        .border(1.dp, colorBorde, CircleShape)
-                        .semantics { selected = activa }
-                        .testTag("rosario_cuenta")
-                )
+                    Box(
+                        modifier = Modifier
+                            .size(tamano)
+                            .graphicsLayer {
+                                scaleX = escala
+                                scaleY = escala
+                            }
+                            .clip(CircleShape)
+                            .background(colorFondo)
+                            .border(if (actual) 2.dp else 1.dp, colorBorde, CircleShape)
+                            .semantics {
+                                selected = activa
+                                contentDescription = "Ave María ${indice + 1} de $CUENTAS_POR_DECENA"
+                            }
+                            .testTag("rosario_cuenta")
+                    )
+                }
             }
         }
     }
@@ -445,26 +486,26 @@ private fun ContenidoPaso(
         Box(
             modifier = Modifier
                 .background(GoldSubtle, RoundedCornerShape(Radii.md))
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
         ) {
             Text(
                 text = paso.title,
                 color = GoldLight,
-                fontSize = 13.sp,
+                fontSize = (13f * fontMultiplier).sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.5.sp
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Spacing.lg))
 
         if (paso.subtitle != null && mostrarSubtitulo) {
             Text(
                 text = paso.subtitle,
                 color = TextSecondary,
-                fontSize = 12.sp,
+                fontSize = (12f * fontMultiplier).sp,
                 fontStyle = FontStyle.Italic
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
         }
 
         Text(
@@ -501,13 +542,13 @@ private fun FooterRosario(
                     strokeWidth = stroke
                 )
             }
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = Spacing.xl, vertical = Spacing.md)
     ) {
         if (pasoId != RosarioViewModel.PASO_COMPLETADO_ID) {
             FilaAutoavance(velocidad = autoavance, onSeleccion = onAutoavance)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 if (pasoIndex > 0) {
                     BotonRosario(
@@ -523,9 +564,9 @@ private fun FooterRosario(
                     principal = true,
                     onClick = onSiguiente,
                     testTag = "rosario_next",
-                    // La RN deja el botón al ancho del texto en el primer paso y lo estira a
-                    // la mitad del footer cuando ya existe "← Anterior".
-                    modifier = if (pasoIndex > 0) Modifier.weight(1f) else Modifier
+                    // El botón principal domina el footer: ocupa todo el ancho en el primer
+                    // paso y el doble que "← Anterior" cuando ambos conviven.
+                    modifier = if (pasoIndex > 0) Modifier.weight(2f) else Modifier.fillMaxWidth()
                 )
             }
         } else {
@@ -552,15 +593,15 @@ private fun FilaAutoavance(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(bottom = 10.dp)
+            .padding(bottom = Spacing.sm)
             .testTag("rosario_autoavance"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Avance",
             color = TextSecondary,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
         Autoavance.entries.forEach { opcion ->
@@ -590,7 +631,7 @@ private fun BotonRosario(
             .background(if (principal) GoldSubtle else NavySurfaceElevated)
             .border(1.dp, if (principal) GoldPrimary else GoldSubtle, shape)
             .pressable(pressedAlpha = 0.8f, onClick = onClick)
-            .padding(vertical = 16.dp)
+            .padding(vertical = Spacing.lg)
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
