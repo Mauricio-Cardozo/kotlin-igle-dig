@@ -28,6 +28,24 @@ data class MisteriosDelDia(
     val misterios: List<String>
 )
 
+/**
+ * Selección manual de los misterios del rosario. Los valores 1–4 coinciden con los de
+ * Rosarium (MIT, © 2024 Krixec) para no reinterpretar una preferencia ya guardada;
+ * [AUTOMATICO] (0) deja la regla litúrgica por fecha.
+ */
+enum class MisterioRosario(val valor: Int, val etiqueta: String) {
+    AUTOMATICO(0, "Auto"),
+    GOZOSOS(1, "Gozosos"),
+    LUMINOSOS(2, "Luminosos"),
+    DOLOROSOS(3, "Dolorosos"),
+    GLORIOSOS(4, "Gloriosos");
+
+    companion object {
+        fun desdeValor(valor: Int): MisterioRosario =
+            entries.firstOrNull { it.valor == valor } ?: AUTOMATICO
+    }
+}
+
 private const val INTENCIONES_DEL_SANTO_PADRE = "Por las intenciones del Santo Padre"
 
 private val MISTERIOS_GOZOSOS = listOf(
@@ -364,13 +382,24 @@ private object RosarioTextos {
 }
 
 /**
- * Misterios que toca rezar según la fecha. La asignación semanal es la de la RN
- * (lunes y sábado Gozosos; martes y viernes Dolorosos; domingo y miércoles Gloriosos;
- * jueves Luminosos), con las excepciones del tiempo litúrgico tomadas de Rosarium:
- * el 25 de diciembre y los domingos de Adviento se rezan Gozosos, y los domingos de
- * Cuaresma (hasta el Domingo de Ramos) se rezan Dolorosos.
+ * Misterios que toca rezar según la fecha. Con [manual] en [MisterioRosario.AUTOMATICO] la
+ * asignación semanal es la de la RN (lunes y sábado Gozosos; martes y viernes Dolorosos;
+ * domingo y miércoles Gloriosos; jueves Luminosos), con las excepciones del tiempo litúrgico
+ * tomadas de Rosarium: el 25 de diciembre y los domingos de Adviento se rezan Gozosos, y los
+ * domingos de Cuaresma (hasta el Domingo de Ramos) se rezan Dolorosos.
  */
-fun misteriosDelDia(fecha: LocalDate): MisteriosDelDia {
+fun misteriosDelDia(
+    fecha: LocalDate,
+    manual: MisterioRosario = MisterioRosario.AUTOMATICO
+): MisteriosDelDia {
+    when (manual) {
+        MisterioRosario.GOZOSOS -> return MisteriosDelDia("Gozosos", MISTERIOS_GOZOSOS)
+        MisterioRosario.LUMINOSOS -> return MisteriosDelDia("Luminosos", MISTERIOS_LUMINOSOS)
+        MisterioRosario.DOLOROSOS -> return MisteriosDelDia("Dolorosos", MISTERIOS_DOLOROSOS)
+        MisterioRosario.GLORIOSOS -> return MisteriosDelDia("Gloriosos", MISTERIOS_GLORIOSOS)
+        MisterioRosario.AUTOMATICO -> Unit
+    }
+
     val esNavidad = fecha.month == Month.DECEMBER && fecha.dayOfMonth == 25
     if (esNavidad || (fecha.dayOfWeek == DayOfWeek.SUNDAY && esAdviento(fecha))) {
         return MisteriosDelDia("Gozosos", MISTERIOS_GOZOSOS)
@@ -395,8 +424,11 @@ private val ORDINALES_MISTERIO = listOf("1.º", "2.º", "3.º", "4.º", "5.º")
  * cierre (letanías, oración final, padrenuestro por el Santo Padre, salve y jaculatoria),
  * más el paso final de rezo completado.
  */
-fun generarPasosRosario(fecha: LocalDate): List<RosarioStep> {
-    val (nombre, misterios) = misteriosDelDia(fecha)
+fun generarPasosRosario(
+    fecha: LocalDate,
+    manual: MisterioRosario = MisterioRosario.AUTOMATICO
+): List<RosarioStep> {
+    val (nombre, misterios) = misteriosDelDia(fecha, manual)
     val pasos = mutableListOf<RosarioStep>()
 
     pasos += RosarioStep("senal", "Señal de la Cruz", RosarioTextos.SENAL)

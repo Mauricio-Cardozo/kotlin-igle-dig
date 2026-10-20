@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.ui.oracion.MisterioRosario
 import com.example.ui.oracion.generarPasosRosario
 import com.example.ui.oracion.misteriosDelDia
 import org.junit.Assert.assertEquals
@@ -59,6 +60,35 @@ class RosarioStepsTest {
         assertEquals("Dolorosos", misteriosDelDia(LocalDate.of(2026, 3, 29)).nombre)
         // Domingo de Pascua (05/04/2026).
         assertEquals("Gloriosos", misteriosDelDia(LocalDate.of(2026, 4, 5)).nombre)
+    }
+
+    @Test
+    fun misteriosDelDia_manualSelectionOverridesTheLiturgicalRule() {
+        // Domingo de Pascua en Automático: Gloriosos; fijado a mano manda la selección.
+        val pascua = LocalDate.of(2026, 4, 5)
+        assertEquals("Gloriosos", misteriosDelDia(pascua).nombre)
+        assertEquals("Dolorosos", misteriosDelDia(pascua, MisterioRosario.DOLOROSOS).nombre)
+        assertEquals("Gloriosos", misteriosDelDia(pascua, MisterioRosario.GLORIOSOS).nombre)
+
+        // Navidad y domingos de Cuaresma también respetan la elección manual.
+        assertEquals(
+            "Luminosos",
+            misteriosDelDia(LocalDate.of(2026, 12, 25), MisterioRosario.LUMINOSOS).nombre
+        )
+        assertEquals(
+            "Gozosos",
+            misteriosDelDia(LocalDate.of(2026, 2, 22), MisterioRosario.GOZOSOS).nombre
+        )
+    }
+
+    @Test
+    fun generarPasosRosario_manualMysteryBuildsItsOwnDecades() {
+        val pasos = generarPasosRosario(lunes, MisterioRosario.LUMINOSOS)
+
+        assertEquals(90, pasos.size)
+        assertEquals("1.º Misterio Luminosos", pasos[7].title)
+        assertEquals("Misterio 1 de 5 · Luminosos", pasos[7].subtitle)
+        assertEquals("El Bautismo de Jesús en el Jordán", pasos[7].text)
     }
 
     @Test
