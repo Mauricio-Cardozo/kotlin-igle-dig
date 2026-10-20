@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -51,6 +53,7 @@ import com.example.ui.theme.NavySurfaceElevated
 import com.example.ui.theme.Radii
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 
 /**
  * Rezo guiado del Santo Rosario, espejo del `PrayerRunner` de la RN: cabecera con "Paso X de
@@ -75,6 +78,27 @@ fun RosarioScreen(
         if (paso?.id == RosarioViewModel.PASO_COMPLETADO_ID) {
             viewModel.marcarCompletado()
         }
+    }
+
+    // Avance automático: cada paso se muestra el tiempo que lleva rezarlo. El efecto se
+    // reinicia al cambiar de paso, de velocidad o de lista (opciones de oración), y se
+    // detiene solo al llegar al paso de completado.
+    LaunchedEffect(uiState.pasos, uiState.pasoIndex, uiState.autoavance) {
+        val actual = uiState.paso ?: return@LaunchedEffect
+        if (uiState.autoavance == Autoavance.APAGADO ||
+            actual.id == RosarioViewModel.PASO_COMPLETADO_ID
+        ) {
+            return@LaunchedEffect
+        }
+        delay(duracionPasoSegundos(actual, uiState.autoavance) * 1000L)
+        viewModel.siguiente()
+    }
+
+    // Con el avance activo la pantalla no debe apagarse mientras se reza.
+    val view = LocalView.current
+    DisposableEffect(uiState.autoavance) {
+        view.keepScreenOn = uiState.autoavance != Autoavance.APAGADO
+        onDispose { view.keepScreenOn = false }
     }
 
     if (uiState.isLoading || paso == null) {
@@ -152,6 +176,8 @@ fun RosarioScreen(
         FooterRosario(
             pasoId = paso.id,
             pasoIndex = uiState.pasoIndex,
+            autoavance = uiState.autoavance,
+            onAutoavance = viewModel::setAutoavance,
             onAnterior = viewModel::anterior,
             onSiguiente = viewModel::siguiente,
             onRezarDeNuevo = viewModel::rezarDeNuevo
@@ -375,6 +401,8 @@ private fun ContenidoPaso(
 private fun FooterRosario(
     pasoId: String,
     pasoIndex: Int,
+    autoavance: Autoavance,
+    onAutoavance: (Autoavance) -> Unit,
     onAnterior: () -> Unit,
     onSiguiente: () -> Unit,
     onRezarDeNuevo: () -> Unit
@@ -395,6 +423,7 @@ private fun FooterRosario(
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         if (pasoId != RosarioViewModel.PASO_COMPLETADO_ID) {
+            FilaAutoavance(velocidad = autoavance, onSeleccion = onAutoavance)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -424,6 +453,42 @@ private fun FooterRosario(
                 principal = true,
                 onClick = onRezarDeNuevo,
                 testTag = "rosario_restart"
+            )
+        }
+    }
+}
+
+/**
+ * Selector de la velocidad del avance automático. "Off" deja el paso en manual; las otras
+ * tres opciones lo pasan solo cuando termina el tiempo de rezo del texto.
+ */
+@Composable
+private fun FilaAutoavance(
+    velocidad: Autoavance,
+    onSeleccion: (Autoavance) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(bottom = 10.dp)
+            .testTag("rosario_autoavance"),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Avance",
+            color = TextSecondary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Autoavance.entries.forEach { opcion ->
+            PillRosario(
+                texto = opcion.etiqueta,
+                activa = opcion == velocidad,
+                testTag = "rosario_auto_${opcion.name.lowercase()}",
+                compact = true,
+                onClick = { onSeleccion(opcion) }
             )
         }
     }
