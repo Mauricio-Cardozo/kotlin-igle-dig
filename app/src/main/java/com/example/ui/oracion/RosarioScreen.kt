@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -29,14 +27,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
@@ -47,10 +47,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.ui.common.FontSizeControl
 import com.example.ui.common.LoadingState
 import com.example.ui.common.ScreenHeader
 import com.example.ui.common.pressable
@@ -68,8 +68,10 @@ import kotlinx.coroutines.delay
 
 /**
  * Rezo guiado del Santo Rosario, espejo del `PrayerRunner` de la RN: cabecera con "Paso X de
- * N" y control de tamaño, cuentas de la decena en curso, texto de la oración centrado y pie
- * con Anterior/Siguiente. Queda fuera de la barra de pestañas, como en la RN.
+ * N" y engranaje de ajustes, cuentas de la decena en curso, texto de la oración centrado y
+ * pie con Anterior/Siguiente. Los selectores de misterio, oraciones, avance y tamaño viven en
+ * una hoja inferior para dejar la oración casi a pantalla completa, como Rosarium. Queda
+ * fuera de la barra de pestañas, como en la RN.
  */
 @Composable
 fun RosarioScreen(
@@ -79,6 +81,7 @@ fun RosarioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val fontMultiplier by viewModel.fontSizeMultiplier.collectAsStateWithLifecycle()
     val paso = uiState.paso
+    var mostrarAjustes by rememberSaveable { mutableStateOf(false) }
 
     // La RN vuelve a montar la pantalla al entrar: regenera los pasos del día y arranca de
     // cero si el rezo anterior ya se había completado.
@@ -93,8 +96,10 @@ fun RosarioScreen(
 
     // Avance automático: cada paso se muestra el tiempo que lleva rezarlo. El efecto se
     // reinicia al cambiar de paso, de velocidad o de lista (opciones de oración), y se
-    // detiene solo al llegar al paso de completado.
-    LaunchedEffect(uiState.pasos, uiState.pasoIndex, uiState.autoavance) {
+    // detiene solo al llegar al paso de completado. Con la hoja de ajustes abierta se pausa
+    // para que el rezo no siga solo mientras se cambia una opción.
+    LaunchedEffect(uiState.pasos, uiState.pasoIndex, uiState.autoavance, mostrarAjustes) {
+        if (mostrarAjustes) return@LaunchedEffect
         val actual = uiState.paso ?: return@LaunchedEffect
         if (uiState.autoavance == Autoavance.APAGADO ||
             actual.id == RosarioViewModel.PASO_COMPLETADO_ID
@@ -138,28 +143,16 @@ fun RosarioScreen(
     ) {
         ScreenHeader(
             title = "Santo Rosario",
-            subtitle = "Paso ${minOf(uiState.pasoIndex + 1, uiState.total)} de ${uiState.total}",
+            subtitle = buildString {
+                append("Paso ${minOf(uiState.pasoIndex + 1, uiState.total)} de ${uiState.total}")
+                // Indicador discreto: solo aparece cuando el avance automático está activo.
+                if (uiState.autoavance != Autoavance.APAGADO) append(" · Auto")
+            },
             showBack = true,
             onBack = onBackClick,
             rightSlot = {
-                FontSizeControl(
-                    multiplier = fontMultiplier,
-                    onDecrease = viewModel::decreaseFontSize,
-                    onIncrease = viewModel::increaseFontSize,
-                    onReset = viewModel::resetFontSize
-                )
+                BotonAjustesRosario(onClick = { mostrarAjustes = true })
             }
-        )
-
-        SelectorMisterio(
-            seleccionado = uiState.misterioManual,
-            onSeleccion = viewModel::setMisterioManual
-        )
-
-        SelectorOraciones(
-            oraciones = uiState.oraciones,
-            onToggle = viewModel::setOracionOpcional,
-            advertirReinicio = uiState.pasoIndex > 0
         )
 
         if (mostrarCuentas) {
@@ -193,126 +186,57 @@ fun RosarioScreen(
         FooterRosario(
             pasoId = paso.id,
             pasoIndex = uiState.pasoIndex,
-            autoavance = uiState.autoavance,
-            onAutoavance = viewModel::setAutoavance,
             onAnterior = viewModel::anterior,
             onSiguiente = viewModel::siguiente,
             onRezarDeNuevo = viewModel::rezarDeNuevo
         )
     }
-}
 
-/**
- * Selector manual de misterios: "Auto" sigue la regla litúrgica por fecha y las otras cuatro
- * opciones fijan la decena del día. Cambiar la selección reinicia el rezo (los pasos cambian).
- */
-@Composable
-private fun SelectorMisterio(
-    seleccionado: MisterioRosario,
-    onSeleccion: (MisterioRosario) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.xl, vertical = Spacing.sm)
-            .testTag("rosario_misterios"),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-    ) {
-        MisterioRosario.entries.forEach { opcion ->
-            PillRosario(
-                texto = opcion.etiqueta,
-                activa = opcion == seleccionado,
-                testTag = "rosario_misterio_${opcion.name.lowercase()}",
-                onClick = { onSeleccion(opcion) }
-            )
-        }
-    }
-}
-
-/**
- * Oraciones opcionales del rezo: Fátima después de cada decena, Salve y oración final en el
- * cierre. Las tres vienen activas; apagarlas cambia la lista y reinicia el rezo del día.
- */
-@Composable
-private fun SelectorOraciones(
-    oraciones: OracionesRosario,
-    onToggle: (OracionOpcional, Boolean) -> Unit,
-    advertirReinicio: Boolean
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("rosario_opciones")
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl)
-                .padding(bottom = if (advertirReinicio) Spacing.xs else Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-        ) {
-            OracionOpcional.entries.forEach { opcion ->
-                val activa = opcion.incluidaEn(oraciones)
-                PillRosario(
-                    texto = if (activa) "✓ ${opcion.etiqueta}" else opcion.etiqueta,
-                    activa = activa,
-                    testTag = "rosario_opcion_${opcion.name.lowercase()}",
-                    compact = true,
-                    onClick = { onToggle(opcion, !activa) }
-                )
-            }
-        }
-
-        // El aviso solo aparece cuando hay un rezo empezado que se perdería al regenerar.
-        if (advertirReinicio) {
-            Text(
-                text = "Cambiar las opciones reinicia el rezo de hoy.",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.sm)
-            )
-        }
-    }
-}
-
-/** Píldora de los selectores del runner: rellena en oro cuando la opción está activa. */
-@Composable
-private fun PillRosario(
-    texto: String,
-    activa: Boolean,
-    testTag: String,
-    compact: Boolean = false,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(Radii.xxl)
-    Box(
-        modifier = Modifier
-            .clip(shape)
-            .background(if (activa) GoldPrimary else Color.Transparent)
-            .border(1.dp, if (activa) GoldPrimary else GoldSubtle, shape)
-            .heightIn(min = ALTURA_MINIMA_PILDORA)
-            .pressable(pressedAlpha = 0.7f, onClick = onClick)
-            .padding(horizontal = if (compact) Spacing.md else Spacing.lg)
-            .semantics { selected = activa }
-            .testTag(testTag),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = texto,
-            color = if (activa) NavyBackground else GoldPrimary,
-            fontSize = if (compact) 12.sp else 13.sp,
-            fontWeight = FontWeight.SemiBold
+    if (mostrarAjustes) {
+        AjustesRosarioSheet(
+            idioma = uiState.idioma,
+            misterioManual = uiState.misterioManual,
+            oraciones = uiState.oraciones,
+            autoavance = uiState.autoavance,
+            fontMultiplier = fontMultiplier,
+            advertirReinicio = uiState.pasoIndex > 0,
+            onIdioma = viewModel::setIdioma,
+            onMisterio = viewModel::setMisterioManual,
+            onOracion = viewModel::setOracionOpcional,
+            onAutoavance = viewModel::setAutoavance,
+            onDecreaseFont = viewModel::decreaseFontSize,
+            onIncreaseFont = viewModel::increaseFontSize,
+            onResetFont = viewModel::resetFontSize,
+            onDismiss = { mostrarAjustes = false }
         )
     }
 }
 
-/** Alto mínimo de las píldoras de los selectores, para un área táctil cómoda. */
-private val ALTURA_MINIMA_PILDORA = 40.dp
+/** Engranaje de la cabecera: abre la hoja de ajustes. Área táctil de 48 dp. */
+@Composable
+private fun BotonAjustesRosario(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .pressable(pressedAlpha = 0.7f, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = "Ajustes del rosario" }
+            .testTag("rosario_ajustes"),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(NavySurfaceElevated, CircleShape)
+                .border(1.dp, GoldSubtle, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "⚙", color = GoldPrimary, fontSize = 18.sp)
+        }
+    }
+}
 
 /** Diámetro máximo de cada cuenta de la decena; se reduce si la fila no cabe. */
-private val TAMANO_CUENTA_MAX = 20.dp
+private val TAMANO_CUENTA_MAX = 18.dp
 
 /** Separación mínima y máxima entre cuentas; el hilo asoma en estos tramos. */
 private val SEPARACION_CUENTA_MIN = 4.dp
@@ -365,7 +289,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
                     strokeWidth = stroke
                 )
             }
-            .padding(vertical = Spacing.md)
+            .padding(vertical = Spacing.sm)
             .testTag("rosario_cuentas"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -376,7 +300,7 @@ private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.5.sp
         )
-        Spacer(Modifier.height(Spacing.sm))
+        Spacer(Modifier.height(Spacing.xs))
 
         BoxWithConstraints(
             modifier = Modifier
@@ -523,8 +447,6 @@ private fun ContenidoPaso(
 private fun FooterRosario(
     pasoId: String,
     pasoIndex: Int,
-    autoavance: Autoavance,
-    onAutoavance: (Autoavance) -> Unit,
     onAnterior: () -> Unit,
     onSiguiente: () -> Unit,
     onRezarDeNuevo: () -> Unit
@@ -545,7 +467,6 @@ private fun FooterRosario(
             .padding(horizontal = Spacing.xl, vertical = Spacing.md)
     ) {
         if (pasoId != RosarioViewModel.PASO_COMPLETADO_ID) {
-            FilaAutoavance(velocidad = autoavance, onSeleccion = onAutoavance)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md)
@@ -580,42 +501,6 @@ private fun FooterRosario(
     }
 }
 
-/**
- * Selector de la velocidad del avance automático. "Off" deja el paso en manual; las otras
- * tres opciones lo pasan solo cuando termina el tiempo de rezo del texto.
- */
-@Composable
-private fun FilaAutoavance(
-    velocidad: Autoavance,
-    onSeleccion: (Autoavance) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(bottom = Spacing.sm)
-            .testTag("rosario_autoavance"),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Avance",
-            color = TextSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Autoavance.entries.forEach { opcion ->
-            PillRosario(
-                texto = opcion.etiqueta,
-                activa = opcion == velocidad,
-                testTag = "rosario_auto_${opcion.name.lowercase()}",
-                compact = true,
-                onClick = { onSeleccion(opcion) }
-            )
-        }
-    }
-}
-
 @Composable
 private fun BotonRosario(
     text: String,
@@ -640,7 +525,11 @@ private fun BotonRosario(
             color = if (principal) GoldLight else TextSecondary,
             fontSize = 16.sp,
             fontWeight = if (principal) FontWeight.Bold else FontWeight.SemiBold,
-            letterSpacing = if (principal) 0.5.sp else 0.sp
+            letterSpacing = if (principal) 0.5.sp else 0.sp,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
     }
 }
