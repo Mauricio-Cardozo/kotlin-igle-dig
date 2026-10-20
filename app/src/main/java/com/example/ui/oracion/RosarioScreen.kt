@@ -2,6 +2,8 @@ package com.example.ui.oracion
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,14 +27,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -150,7 +157,11 @@ fun RosarioScreen(
         )
 
         if (mostrarCuentas) {
-            CuentasDecena(label = paso.subtitle.orEmpty(), completadas = avesCompletadas)
+            CuentasDecena(
+                decada = misterioActual,
+                label = paso.subtitle.orEmpty(),
+                completadas = avesCompletadas
+            )
         }
 
         Column(
@@ -293,16 +304,47 @@ private fun PillRosario(
     }
 }
 
+/** Diámetro de cada cuenta de la decena, en paridad con la RN. */
+private val TAMANO_CUENTA = 14.dp
+
+/** Separación entre cuentas; el hilo asoma en estos tramos. */
+private val SEPARACION_CUENTA = 6.dp
+
 /**
- * Cuentas de la decena en curso: el nombre del misterio ("Misterio N de 5 · Gozosos") y diez
- * cuentas que se encienden con cada avemaría rezada. El fundido de color es el único guiño
- * fuera de la RN, inspirado en las transiciones entre decenas de Rosarium.
+ * Cuentas de la decena en curso: el nombre del misterio ("Misterio N de 5 · Gozosos"), el hilo
+ * que une las cuentas y diez cuentas que se encienden con cada avemaría rezada. El hilo se
+ * enciende de centro a centro; al cambiar de decena el bloque entra con un desplazamiento corto
+ * y las cuentas se apagan. El fundido de color de las cuentas es el único guiño fuera de la RN,
+ * inspirado en las transiciones entre decenas de Rosarium.
  */
 @Composable
-private fun CuentasDecena(label: String, completadas: Int) {
+private fun CuentasDecena(decada: Int, label: String, completadas: Int) {
+    // La primera decena no entra animada; las siguientes aparecen con un desplazamiento corto
+    // que acompaña el cambio de hilo y de cuentas. Con "reducir movimiento" del sistema la
+    // escala de duración es 0 y el cambio es instantáneo.
+    val decadaInicial = remember { decada }
+    val entrada = remember(decada) {
+        Animatable(if (decada == decadaInicial) 1f else 0f)
+    }
+    LaunchedEffect(entrada) {
+        if (entrada.value < 1f) {
+            entrada.animateTo(1f, animationSpec = tween(durationMillis = 280))
+        }
+    }
+
+    val fraccion by animateFloatAsState(
+        targetValue = fraccionHiloDecena(completadas),
+        animationSpec = tween(durationMillis = 280),
+        label = "hilo"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                alpha = 0.35f + 0.65f * entrada.value
+                translationX = (1f - entrada.value) * 12.dp.toPx()
+            }
             .drawBehind {
                 val stroke = 1.dp.toPx()
                 drawLine(
@@ -325,8 +367,47 @@ private fun CuentasDecena(label: String, completadas: Int) {
         )
         Spacer(Modifier.height(8.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(10) { indice ->
+        Row(
+            modifier = Modifier
+                .drawBehind {
+                    val diametro = TAMANO_CUENTA.toPx()
+                    val y = size.height / 2f
+                    val xInicio = diametro / 2f
+                    val xFin = size.width - diametro / 2f
+                    val grosor = 1.5.dp.toPx()
+
+                    // Hilo apagado: marca el recorrido completo y se ve entre las cuentas.
+                    drawLine(
+                        color = GoldSubtle.copy(alpha = 0.4f),
+                        start = Offset(xInicio, y),
+                        end = Offset(xFin, y),
+                        strokeWidth = grosor,
+                        cap = StrokeCap.Round
+                    )
+                    // Hilo encendido: crece hasta la última avemaría completada.
+                    if (fraccion > 0f) {
+                        drawLine(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(GoldSubtle, GoldLight),
+                                startX = xInicio,
+                                endX = xFin
+                            ),
+                            start = Offset(xInicio, y),
+                            end = Offset(xInicio + (xFin - xInicio) * fraccion, y),
+                            strokeWidth = grosor,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+                .semantics {
+                    contentDescription =
+                        "Cuentas de la decena: $completadas de $CUENTAS_POR_DECENA"
+                }
+                .testTag("rosario_hilo"),
+            horizontalArrangement = Arrangement.spacedBy(SEPARACION_CUENTA),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(CUENTAS_POR_DECENA) { indice ->
                 val activa = indice < completadas
                 val colorFondo by animateColorAsState(
                     targetValue = if (activa) GoldPrimary else NavySurfaceElevated,
@@ -341,7 +422,7 @@ private fun CuentasDecena(label: String, completadas: Int) {
 
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(TAMANO_CUENTA)
                         .clip(CircleShape)
                         .background(colorFondo)
                         .border(1.dp, colorBorde, CircleShape)
