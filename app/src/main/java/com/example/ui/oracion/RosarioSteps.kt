@@ -46,6 +46,36 @@ enum class MisterioRosario(val valor: Int, val etiqueta: String) {
     }
 }
 
+/**
+ * Oraciones opcionales del rezo. Se incluyen las tres por defecto para conservar la secuencia
+ * de 90 pasos de la RN; Rosarium (MIT, © 2024 Krixec) usa las mismas opciones con las claves
+ * `fatima`, `regina` (la Salve) y `final`, pero deja la oración final apagada.
+ */
+data class OracionesRosario(
+    val fatima: Boolean = true,
+    val salve: Boolean = true,
+    val oracionFinal: Boolean = true
+)
+
+/** Oración que se puede incluir o quitar del rezo desde las píldoras del runner. */
+enum class OracionOpcional(val etiqueta: String) {
+    FATIMA("Fátima"),
+    SALVE("Salve"),
+    ORACION_FINAL("Oración final");
+
+    fun incluidaEn(oraciones: OracionesRosario): Boolean = when (this) {
+        FATIMA -> oraciones.fatima
+        SALVE -> oraciones.salve
+        ORACION_FINAL -> oraciones.oracionFinal
+    }
+
+    fun con(oraciones: OracionesRosario, incluida: Boolean): OracionesRosario = when (this) {
+        FATIMA -> oraciones.copy(fatima = incluida)
+        SALVE -> oraciones.copy(salve = incluida)
+        ORACION_FINAL -> oraciones.copy(oracionFinal = incluida)
+    }
+}
+
 private const val INTENCIONES_DEL_SANTO_PADRE = "Por las intenciones del Santo Padre"
 
 private val MISTERIOS_GOZOSOS = listOf(
@@ -419,14 +449,16 @@ fun misteriosDelDia(
 private val ORDINALES_MISTERIO = listOf("1.º", "2.º", "3.º", "4.º", "5.º")
 
 /**
- * Genera los 90 pasos del Santo Rosario para [fecha]: apertura (señal, contrición,
- * padrenuestro y tres avemarías), las cinco decenas con sus diez avemarías cada una y el
- * cierre (letanías, oración final, padrenuestro por el Santo Padre, salve y jaculatoria),
- * más el paso final de rezo completado.
+ * Genera los pasos del Santo Rosario para [fecha]: apertura (señal, contrición, padrenuestro
+ * y tres avemarías), las cinco decenas con sus diez avemarías cada una y el cierre (letanías,
+ * oración final, padrenuestro por el Santo Padre, salve y jaculatoria), más el paso final de
+ * rezo completado. Con todas las [oraciones] opcionales (el valor por defecto) son 90 pasos,
+ * la misma secuencia de la RN.
  */
 fun generarPasosRosario(
     fecha: LocalDate,
-    manual: MisterioRosario = MisterioRosario.AUTOMATICO
+    manual: MisterioRosario = MisterioRosario.AUTOMATICO,
+    oraciones: OracionesRosario = OracionesRosario()
 ): List<RosarioStep> {
     val (nombre, misterios) = misteriosDelDia(fecha, manual)
     val pasos = mutableListOf<RosarioStep>()
@@ -468,7 +500,9 @@ fun generarPasosRosario(
             )
         }
         pasos += RosarioStep("gloria-$m", "Gloria", RosarioTextos.GLORIA, mysteryIndex = m)
-        pasos += RosarioStep("ohjesus-$m", "Oh Jesús Mío", RosarioTextos.OH_JESUS, mysteryIndex = m)
+        if (oraciones.fatima) {
+            pasos += RosarioStep("ohjesus-$m", "Oh Jesús Mío", RosarioTextos.OH_JESUS, mysteryIndex = m)
+        }
         pasos += RosarioStep(
             id = "mariamadre-$m",
             title = "María, Madre de Gracia",
@@ -478,7 +512,9 @@ fun generarPasosRosario(
     }
 
     pasos += RosarioStep("letanias", "Letanías de la Santísima Virgen", RosarioTextos.LETANIAS)
-    pasos += RosarioStep("oracion-final", "Oración Final", RosarioTextos.ORACION_FINAL)
+    if (oraciones.oracionFinal) {
+        pasos += RosarioStep("oracion-final", "Oración Final", RosarioTextos.ORACION_FINAL)
+    }
     pasos += RosarioStep(
         id = "padrenuestro-papa",
         title = "Padrenuestro",
@@ -487,7 +523,9 @@ fun generarPasosRosario(
     )
     pasos += RosarioStep("avemaria-final", "Avemaría", RosarioTextos.AVEMARIA_FINAL)
     pasos += RosarioStep("gloria-final", "Gloria", RosarioTextos.GLORIA_FINAL)
-    pasos += RosarioStep("salve", "Salve", RosarioTextos.SALVE)
+    if (oraciones.salve) {
+        pasos += RosarioStep("salve", "Salve", RosarioTextos.SALVE)
+    }
     pasos += RosarioStep("jaculatoria", "Jaculatoria Final", RosarioTextos.JACULATORIA)
     pasos += RosarioStep("completado", "Rosario Completado 🌹", RosarioTextos.COMPLETADO)
 

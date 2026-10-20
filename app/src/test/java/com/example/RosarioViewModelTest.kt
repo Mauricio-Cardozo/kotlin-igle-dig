@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.user.StreaksPreferencesRepository
 import com.example.data.user.UserPreferencesRepository
 import com.example.ui.oracion.MisterioRosario
+import com.example.ui.oracion.OracionOpcional
+import com.example.ui.oracion.OracionesRosario
 import com.example.ui.oracion.RosarioViewModel
 import com.example.util.FixedDateProvider
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +71,15 @@ class RosarioViewModelTest {
             userPreferencesRepository.setFontSizeMultiplier(UserPreferencesRepository.DEFAULT_FONT_SCALE)
             userPreferencesRepository.setRosarioMisterioManual(
                 UserPreferencesRepository.DEFAULT_ROSARIO_MISTERIO_MANUAL
+            )
+            userPreferencesRepository.setRosarioFatima(
+                UserPreferencesRepository.DEFAULT_ROSARIO_FATIMA
+            )
+            userPreferencesRepository.setRosarioSalve(
+                UserPreferencesRepository.DEFAULT_ROSARIO_SALVE
+            )
+            userPreferencesRepository.setRosarioOracionFinal(
+                UserPreferencesRepository.DEFAULT_ROSARIO_ORACION_FINAL
             )
         }
     }
@@ -156,6 +167,47 @@ class RosarioViewModelTest {
         assertEquals(0, viewModel.uiState.value.pasoIndex)
         assertTrue(viewModel.uiState.value.completado)
         assertEquals(1, totalRosarios())
+    }
+
+    @Test
+    fun viewModel_optionalPrayers_defaultToTheRnSequence() = runTest(testDispatcher) {
+        val estado = crearViewModel().awaitLoaded()
+
+        assertEquals(OracionesRosario(), estado.oraciones)
+        assertEquals(90, estado.total)
+    }
+
+    @Test
+    fun viewModel_optionalPrayer_togglesAndResetsTheSavedStep() = runTest(testDispatcher) {
+        val viewModel = crearViewModel()
+        viewModel.awaitLoaded()
+        viewModel.siguiente()
+        viewModel.siguiente()
+        esperarProgreso(2)
+
+        viewModel.setOracionOpcional(OracionOpcional.SALVE, false)
+
+        val estado = viewModel.uiState.value
+        assertFalse(estado.oraciones.salve)
+        assertEquals(89, estado.total)
+        assertEquals(0, estado.pasoIndex)
+        assertFalse(estado.pasos.any { it.id == "salve" })
+
+        // La preferencia se guarda después del borrado: esperarla garantiza ambos efectos.
+        esperarOraciones { !it.salve }
+        assertNull(streaksRepository.getRosarioProgreso().paso)
+    }
+
+    @Test
+    fun viewModel_optionalPrayers_areRestoredFromPreferences() = runTest(testDispatcher) {
+        userPreferencesRepository.setRosarioFatima(false)
+
+        val viewModel = crearViewModel()
+        val estado = viewModel.awaitLoaded()
+
+        assertFalse(estado.oraciones.fatima)
+        assertEquals(85, estado.total)
+        assertFalse(estado.pasos.any { it.id.startsWith("ohjesus-") })
     }
 
     @Test
@@ -343,6 +395,23 @@ class RosarioViewModelTest {
         withContext(Dispatchers.IO) {
             withTimeout(5_000) {
                 while (userPreferencesRepository.rosarioMisterioManual.first() != misterio.valor) {
+                    delay(1)
+                }
+            }
+        }
+    }
+
+    /** Espera (en tiempo real) a que DataStore publique las oraciones opcionales esperadas. */
+    private suspend fun esperarOraciones(predicado: (OracionesRosario) -> Boolean) {
+        withContext(Dispatchers.IO) {
+            withTimeout(5_000) {
+                while (true) {
+                    val actual = OracionesRosario(
+                        fatima = userPreferencesRepository.rosarioFatima.first(),
+                        salve = userPreferencesRepository.rosarioSalve.first(),
+                        oracionFinal = userPreferencesRepository.rosarioOracionFinal.first()
+                    )
+                    if (predicado(actual)) break
                     delay(1)
                 }
             }

@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.ui.oracion.MisterioRosario
+import com.example.ui.oracion.OracionesRosario
 import com.example.ui.oracion.generarPasosRosario
 import com.example.ui.oracion.misteriosDelDia
 import org.junit.Assert.assertEquals
@@ -117,6 +118,49 @@ class RosarioStepsTest {
                 "avemaria-final", "gloria-final", "salve", "jaculatoria", "completado"
             ),
             pasos.takeLast(8).map { it.id }
+        )
+    }
+
+    @Test
+    fun generarPasosRosario_optionalPrayersAreOnByDefaultAndCanBeRemoved() {
+        val completos = generarPasosRosario(lunes)
+        assertEquals(90, completos.size)
+        assertTrue(completos.any { it.id == "ohjesus-0" })
+        assertTrue(completos.any { it.id == "salve" })
+        assertTrue(completos.any { it.id == "oracion-final" })
+
+        val sinNinguna = generarPasosRosario(
+            lunes,
+            oraciones = OracionesRosario(fatima = false, salve = false, oracionFinal = false)
+        )
+        assertEquals(83, sinNinguna.size)
+        assertFalse(sinNinguna.any { it.id.startsWith("ohjesus-") })
+        assertFalse(sinNinguna.any { it.id == "salve" })
+        assertFalse(sinNinguna.any { it.id == "oracion-final" })
+        assertEquals("completado", sinNinguna.last().id)
+
+        // Las oraciones que no son opcionales siguen en su sitio.
+        assertEquals(5, sinNinguna.count { it.id.startsWith("mariamadre-") })
+        assertEquals(1, sinNinguna.count { it.id == "letanias" })
+    }
+
+    @Test
+    fun generarPasosRosario_eachOptionalPrayerChangesOnlyItsOwnSteps() {
+        assertEquals(85, generarPasosRosario(lunes, oraciones = OracionesRosario(fatima = false)).size)
+        assertEquals(89, generarPasosRosario(lunes, oraciones = OracionesRosario(salve = false)).size)
+        assertEquals(89, generarPasosRosario(lunes, oraciones = OracionesRosario(oracionFinal = false)).size)
+
+        // Sin Fátima, la decena sigue con Gloria y María, Madre de Gracia.
+        val sinFatima = generarPasosRosario(lunes, oraciones = OracionesRosario(fatima = false))
+        assertEquals(
+            listOf(
+                "misterio-0", "padrenuestro-0",
+                "avemaria-0-1", "avemaria-0-2", "avemaria-0-3", "avemaria-0-4",
+                "avemaria-0-5", "avemaria-0-6", "avemaria-0-7", "avemaria-0-8",
+                "avemaria-0-9", "avemaria-0-10",
+                "gloria-0", "mariamadre-0"
+            ),
+            sinFatima.subList(7, 7 + 14).map { it.id }
         )
     }
 
