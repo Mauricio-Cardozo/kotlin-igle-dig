@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.common.FontSizeControl
+import com.example.ui.common.LoadingState
 import com.example.ui.common.ScreenHeader
 import com.example.ui.common.pressable
 import com.example.ui.theme.GoldLight
@@ -58,6 +60,7 @@ import com.example.ui.theme.NavyBackground
 import com.example.ui.theme.NavySeparator
 import com.example.ui.theme.NavySurfaceElevated
 import com.example.ui.theme.Radii
+import com.example.ui.theme.Spacing
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
@@ -114,7 +117,9 @@ fun RosarioScreen(
                 .fillMaxSize()
                 .background(NavyBackground)
                 .testTag("screen_rosario")
-        )
+        ) {
+            LoadingState()
+        }
         return
     }
 
@@ -168,7 +173,7 @@ fun RosarioScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 60.dp),
+                .padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xl, bottom = Spacing.xxxl),
             verticalArrangement = Arrangement.Center
         ) {
             Crossfade(
@@ -209,9 +214,9 @@ private fun SelectorMisterio(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .padding(horizontal = Spacing.xl, vertical = Spacing.sm)
             .testTag("rosario_misterios"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         MisterioRosario.entries.forEach { opcion ->
             PillRosario(
@@ -243,9 +248,9 @@ private fun SelectorOraciones(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = if (advertirReinicio) 2.dp else 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = Spacing.xl)
+                .padding(bottom = if (advertirReinicio) Spacing.xs else Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             OracionOpcional.entries.forEach { opcion ->
                 val activa = opcion.incluidaEn(oraciones)
@@ -264,8 +269,8 @@ private fun SelectorOraciones(
             Text(
                 text = "Cambiar las opciones reinicia el rezo de hoy.",
                 color = TextSecondary,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.sm)
             )
         }
     }
@@ -286,11 +291,9 @@ private fun PillRosario(
             .clip(shape)
             .background(if (activa) GoldPrimary else Color.Transparent)
             .border(1.dp, if (activa) GoldPrimary else GoldSubtle, shape)
+            .heightIn(min = ALTURA_MINIMA_PILDORA)
             .pressable(pressedAlpha = 0.7f, onClick = onClick)
-            .padding(
-                horizontal = if (compact) 12.dp else 14.dp,
-                vertical = if (compact) 6.dp else 7.dp
-            )
+            .padding(horizontal = if (compact) Spacing.md else Spacing.lg)
             .semantics { selected = activa }
             .testTag(testTag),
         contentAlignment = Alignment.Center
@@ -298,11 +301,14 @@ private fun PillRosario(
         Text(
             text = texto,
             color = if (activa) NavyBackground else GoldPrimary,
-            fontSize = if (compact) 11.sp else 12.sp,
+            fontSize = if (compact) 12.sp else 13.sp,
             fontWeight = FontWeight.SemiBold
         )
     }
 }
+
+/** Alto mínimo de las píldoras de los selectores, para un área táctil cómoda. */
+private val ALTURA_MINIMA_PILDORA = 40.dp
 
 /** Diámetro de cada cuenta de la decena, en paridad con la RN. */
 private val TAMANO_CUENTA = 14.dp
@@ -445,26 +451,26 @@ private fun ContenidoPaso(
         Box(
             modifier = Modifier
                 .background(GoldSubtle, RoundedCornerShape(Radii.md))
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
         ) {
             Text(
                 text = paso.title,
                 color = GoldLight,
-                fontSize = 13.sp,
+                fontSize = (13f * fontMultiplier).sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.5.sp
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Spacing.lg))
 
         if (paso.subtitle != null && mostrarSubtitulo) {
             Text(
                 text = paso.subtitle,
                 color = TextSecondary,
-                fontSize = 12.sp,
+                fontSize = (12f * fontMultiplier).sp,
                 fontStyle = FontStyle.Italic
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
         }
 
         Text(
