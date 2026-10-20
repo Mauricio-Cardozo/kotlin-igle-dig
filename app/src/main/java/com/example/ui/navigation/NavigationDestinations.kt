@@ -55,6 +55,7 @@ object LiturgiaDestinations {
     const val SANTO_DETALLE = "santo/{id}"
     const val MISAL_PROPIO = "misal/propio"
     const val AJUSTES = "ajustes"
+    const val LICENCIAS = "licencias"
 
     fun santoDetalleRoute(id: Long): String = "santo/$id"
 

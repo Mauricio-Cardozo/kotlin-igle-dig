@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,7 +42,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -50,6 +53,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.AppContainer
+import com.example.ui.ajustes.LicenciasScreen
 import com.example.ui.biblia.BibliaViewModel
 import com.example.ui.biblia.BibliaViewModelFactory
 import com.example.ui.biblia.CapitulosScreen
@@ -70,6 +74,7 @@ import com.example.ui.oracion.RosarioViewModelFactory
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSubtle
 import com.example.ui.theme.NavyBackground
+import com.example.ui.theme.Radii
 import com.example.ui.theme.TextSecondary
 
 /**
@@ -258,8 +263,28 @@ fun MainScreen(
                         title = "Ajustes",
                         icon = Icons.Default.Settings,
                         description = "Configuración de notificaciones, recordatorios, tamaño de letra y respaldo de datos.",
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { navController.popBackStack() },
+                        footer = {
+                            Text(
+                                text = "Licencias y créditos",
+                                color = GoldPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(Radii.xxl))
+                                    .border(1.dp, GoldSubtle, RoundedCornerShape(Radii.xxl))
+                                    .pressable(pressedAlpha = 0.7f) {
+                                        navController.navigate(LiturgiaDestinations.LICENCIAS)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 9.dp)
+                                    .testTag("ajustes_licencias")
+                            )
+                        }
                     )
+                }
+
+                composable(LiturgiaDestinations.LICENCIAS) {
+                    LicenciasScreen(onBackClick = { navController.popBackStack() })
                 }
 
                 // Biblia Tab (3-level flow)
