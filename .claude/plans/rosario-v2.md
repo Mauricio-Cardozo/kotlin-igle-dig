@@ -16,7 +16,7 @@
 
 
 ## Context
-El pulido visual v1 (3 commits locales, sin push por el 403 de GitHub) no resolvió lo principal: en el estilo gold+navy la pantalla pierde mucho espacio por 3 filas de controles arriba y 2 abajo. Rosarium deja el texto casi a pantalla completa y manda los ajustes a otro panel. Además se quiere **elegir idioma** (Español ahora, **Latín** nuevo, **Griego con pronunciación** más adelante).
+El pulido visual v1 (ya en el PR #42) no resolvió lo principal: en el estilo gold+navy la pantalla pierde mucho espacio por 3 filas de controles arriba y 2 abajo. Rosarium deja el texto casi a pantalla completa y manda los ajustes a otro panel. Además se quiere **elegir idioma** (Español ahora, **Latín** nuevo, **Griego con pronunciación** más adelante).
 
 Decisiones del usuario: texto a pantalla completa + **hoja de ajustes**; cuentas en **barra fina** sobre el texto; idiomas **Español + Latín**, interfaz de la app siempre en español.
 
@@ -66,7 +66,7 @@ Decisiones del usuario: texto a pantalla completa + **hoja de ajustes**; cuentas
 ## Verificación
 1. `./gradlew testDebugUnitTest lintDebug assembleDebug` — **no hay Android SDK en este contenedor**, hay que correrlo en tu máquina o en CI.
 2. En emulador: abrir ⚙, cambiar idioma a Latín en medio de una decena y comprobar que el paso e índice no cambian; probar los 4 misterios, Fátima/Salve/Final, avance automático, fuente A+ (texto largo: letanías en latín), pantallas chicas.
-3. Pendiente externo: el `git push` sigue bloqueado por permisos de GitHub (instalar la app de Claude en el repo).
+3. El push ya funciona (GitHub conectado); CI corre `testDebugUnitTest` en el PR.
 
 ## Riesgos / preguntas abiertas
 - Revisión de los textos en latín (los escribo yo; conviene que los revises).
