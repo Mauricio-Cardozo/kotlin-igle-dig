@@ -232,8 +232,12 @@ Por qué: <el problema o la razón del cambio>
 Refs #<issue>
 ```
 
-Tipos: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`, `delete`, `redesign`.
+Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert` (los de [Conventional Commits 1.0.0](https://www.conventionalcommits.org/); no se usan tipos propios).
 Ámbitos: `biblia`, `liturgia`, `misal`, `oracion`, `catecismo`, `ui`, `db`, `data`, `nav`, `build`.
+
+- Equivalencias de los tipos viejos: un rediseño visual que cambia lo que ve el usuario es `feat(ui)`, uno sin cambio de comportamiento es `refactor(ui)`; borrar código muerto o archivos es `refactor` (o `chore` si no es código). `style` es solo formato de código, no estilos de UI.
+- Resumen en imperativo, en minúscula y sin punto final. Cambios incompatibles con `!` tras el tipo/ámbito y/o el footer `BREAKING CHANGE: <detalle>`. Footers solo para referencias a issues (`Closes #12`, `Refs #45`), nunca de atribución.
+- El título de las PRs sigue el mismo formato.
 
 Cada commit debe **compilar** y dejar los tests en verde. Cambios de esquema (Room/SQLite) van en su propio commit.
 

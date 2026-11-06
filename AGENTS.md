@@ -79,6 +79,8 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
   - Corrutinas: Todas las operaciones de I/O a SQLite, Room o DataStore deben ejecutarse estrictamente en `Dispatchers.IO`.
 - **Compose**:
   - Los componentes de interfaz (`Screen`, `Component`) deben aplicar *State Hoisting*. Los componentes no deben recibir directamente el ViewModel a menos que sean pantallas raíz de navegación.
+  - ViewModels: exponen `StateFlow<UiState>` (sealed `Success`/`Loading`/`Error`) y reciben sus dependencias por `ViewModelProvider.Factory`.
+  - Feedback al presionar con `Modifier.pressable` (opacidad), no con el ripple de Material 3.
   - Uso de `testTag` descriptivos en elementos interactivos para pruebas automáticas.
   - Paleta litúrgica coherente definida en `Color.kt` (`NavyBackground` `#0D1B2A`, `NavySurface` `#1A2D45`, `NavySurfaceElevated` `#243B55`, `GoldPrimary` `#C9A84C`, `GoldLight` `#E8C97A`, `GoldSubtle` `#8B6914`). Tipografía del sistema (sin serifas) y escala de espaciado/radios en `Dimens.kt` (`Spacing`/`Radii`), en paridad con la RN.
 - **Navegación**:
@@ -96,6 +98,16 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
 > instalar. Nunca fabriques directorios, archivos de licencia ni carpetas de SDK falsos.
 
 ---
+
+### Flujo de trabajo (para cualquier IA)
+
+Este archivo es la fuente única para cualquier agente que trabaje en el repo. Claude Code lo carga a través de `CLAUDE.md`, que solo lo importa. El conocimiento del proyecto se actualiza acá, no en archivos propios de cada herramienta.
+
+- **Compilar antes de terminar**: si tocaste archivos `.kt`/`.kts`, corré `./gradlew compileDebugKotlin --quiet` y corregí todos los errores antes de dar la tarea por terminada. Claude Code lo hace automáticamente con un hook al final de cada turno (`.claude/hooks/compile-check.sh`); las demás IAs deben correrlo a mano.
+- **Tests**: antes de cerrar un cambio de lógica (repositorios, ViewModels, `util/`), corré `./gradlew testDebugUnitTest`. `./gradlew lintDebug` es lento; corrélo antes de abrir un PR.
+- **Base de datos**: no edites a mano `app/src/main/assets/iglesia_digital.db`. Al actualizar el asset, subí `CURRENT_CONTENT_VERSION` en `IglesiaDatabaseHelper.kt` y no toques `user_version`.
+- **Git Flow**: nunca hagas commits directos a `main` ni a `develop`. El trabajo nuevo va en `feature/<descripcion-corta>` (o `bugfix/<descripcion-corta>`) desde `develop`; las versiones en `release/X.Y.Z` y los arreglos urgentes en `hotfix/X.Y.Z` desde `main`. Ramas en minúsculas y con guiones. ⚠️ `develop` todavía no existe: preguntá al dueño antes de crearla.
+- **Sin atribución a IA**: nada de `Co-Authored-By`, «Generated with…», firmas ni comentarios que mencionen a una IA en commits, PRs, código o documentación.
 
 ## 4. Cómo Compilar y Correr los Tests
 
@@ -128,6 +140,17 @@ El diseño sigue una arquitectura desacoplada en tres niveles de persistencia:
   ```
 - **Verificación de Linter**:
   ```bash
+- **Una sola clase o método de test**:
+  ```bash
+  ./gradlew testDebugUnitTest --tests com.example.SeasonsTest
+  ./gradlew testDebugUnitTest --tests com.example.SeasonsTest.romanToInt_convertsRomanNumerals
+  ./gradlew connectedDebugAndroidTest --tests com.example.BibliaFtsInstrumentedTest
+  ```
+- **Chequeo rápido de compilación** (sin generar APK):
+  ```bash
+  ./gradlew compileDebugKotlin --quiet
+  ```
+- **CI**: `.github/workflows/ci.yml` corre `testDebugUnitTest` en cada push/PR a `main`.
   ./gradlew lintDebug
   ```
 
@@ -182,6 +205,9 @@ Por qué: <problema o razón del cambio>
 - <cambio concreto>
 ```
 
-- Tipos: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`, `delete`, `redesign`.
+- Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert` (los de [Conventional Commits 1.0.0](https://www.conventionalcommits.org/); no se usan tipos propios).
 - Ámbitos: `biblia`, `liturgia`, `misal`, `oracion`, `catecismo`, `ui`, `db`, `data`, `nav`, `build`.
+- Equivalencias de los tipos viejos: un rediseño visual que cambia lo que ve el usuario es `feat(ui)`, uno sin cambio de comportamiento es `refactor(ui)`; borrar código muerto o archivos es `refactor` (o `chore` si no es código). `style` es solo formato de código, no estilos de UI.
+- Resumen en imperativo, en minúscula y sin punto final. Cambios incompatibles con `!` tras el tipo/ámbito y/o el footer `BREAKING CHANGE: <detalle>`. Footers solo para referencias a issues (`Closes #12`, `Refs #45`), nunca de atribución.
+- El título de las PRs sigue el mismo formato.
 - Cada commit compila y deja los tests en verde. Los cambios de esquema (Room/SQLite) van en su propio commit.
